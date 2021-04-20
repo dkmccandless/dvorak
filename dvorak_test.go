@@ -174,3 +174,43 @@ func TestParseCard(t *testing.T) {
 		}
 	}
 }
+
+func TestParseDeck(t *testing.T) {
+	for _, test := range []struct {
+		s     string
+		cards []*Card
+	}{
+		{"", nil},
+		{"{{card", nil},
+		{"{{card}}", []*Card{{BGColor: otherGray}}},
+		{
+			`{{card|title=A|text={{card|title=B|type=Thing}}card|type=Action}}
+			{{card|title=C}}`,
+			[]*Card{
+				{Title: "B", Type: "Thing", BGColor: thingBlue},
+				{Title: "C", BGColor: otherGray},
+			},
+		},
+		{
+			`
+				{{card| title = A | type = Action }}
+				card|title=B|type=Thing}}
+				{{card|title=C|type=Letter}}
+				{{card|title=D
+				{{card|title=E}}
+			`,
+			[]*Card{
+				{Title: "A", Type: "Action", BGColor: actionRed},
+				{Title: "C", Type: "Letter", BGColor: otherGray},
+				{Title: "E", BGColor: otherGray},
+			},
+		},
+	} {
+		cards := ParseDeck(test.s)
+		if !reflect.DeepEqual(cards, test.cards) {
+			t.Errorf("ParseDeck(%q): got %v, want %v",
+				test.s, cards, test.cards,
+			)
+		}
+	}
+}

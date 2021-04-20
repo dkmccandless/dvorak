@@ -54,6 +54,29 @@ type Card struct {
 	MiniCard string
 }
 
+// ParseDeck parses a list of Template:Card values.
+func ParseDeck(s string) []*Card {
+	var cards []*Card
+	for {
+		cl := strings.Index(s, "}}")
+		if cl == -1 {
+			break
+		}
+		op := strings.LastIndex(s[:cl], "{{")
+		if op == -1 {
+			s = s[cl+2:]
+			continue
+		}
+
+		c, err := ParseCard(s[op : cl+2])
+		if err == nil {
+			cards = append(cards, c)
+		}
+		s = s[cl+2:]
+	}
+	return cards
+}
+
 // ParseCard parses a single instance of Template:Card source code.
 func ParseCard(s string) (*Card, error) {
 	// http://dvorakgame.co.uk/index.php/Template:Card
