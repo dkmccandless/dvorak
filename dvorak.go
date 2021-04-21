@@ -56,6 +56,19 @@ type Card struct {
 
 // ParseDeck parses a list of Template:Card values.
 func ParseDeck(s string) []*Card {
+	// Elide wiki hidden text
+	for {
+		op := strings.Index(s, "<!--")
+		if op == -1 {
+			break
+		}
+		cl := strings.Index(s[op:], "-->")
+		if cl == -1 {
+			break
+		}
+		s = s[:op] + s[op+cl+3:]
+	}
+
 	var cards []*Card
 	for {
 		cl := strings.Index(s, "}}")

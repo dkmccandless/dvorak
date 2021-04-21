@@ -205,6 +205,18 @@ func TestParseDeck(t *testing.T) {
 				{Title: "E", BGColor: otherGray},
 			},
 		},
+		{
+			`
+				{{card|title=A|type=Action|bgcolor=900}}
+				<!-- {{card|title=|type=Action|text=|creator=|bgcolor=600}} -->
+				<!-- {{card|title=|type=Thing|text=|creator=|bgcolor=006}} -->
+				{{card|title=B|type=Thing|bgcolor=090}}
+			`,
+			[]*Card{
+				{Title: "A", Type: "Action", BGColor: &color.RGBA{153, 0, 0, 255}},
+				{Title: "B", Type: "Thing", BGColor: &color.RGBA{0, 153, 0, 255}},
+			},
+		},
 	} {
 		cards := ParseDeck(test.s)
 		if !reflect.DeepEqual(cards, test.cards) {
