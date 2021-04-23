@@ -4,12 +4,15 @@ package dvorak
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"image/color"
 	"strings"
 )
 
 // Card is a Dvorak card.
 type Card struct {
+	// http://dvorakgame.co.uk/index.php/Template:Card
+
 	// Title is the card's title.
 	Title string
 
@@ -92,7 +95,6 @@ func ParseDeck(s string) []*Card {
 
 // ParseCard parses a single instance of Template:Card source code.
 func ParseCard(s string) (*Card, error) {
-	// http://dvorakgame.co.uk/index.php/Template:Card
 	// https://meta.wikimedia.org/wiki/Help:Template
 
 	var errInvalid = errors.New("invalid syntax")
@@ -256,4 +258,64 @@ func nextDelimiter(s string) int {
 		return -1
 	}
 	return lenbr + next
+}
+
+// subpage is a subpage of a Dvorak deck page.
+type subpage struct {
+	// http://dvorakgame.co.uk/index.php/Template:Subpage
+	page string
+}
+
+// parseSubpage parses a single instance of Template:Subpage source code.
+func parseSubpage(s string) (*subpage, error) {
+	var errInvalid = errors.New("invalid syntax")
+
+	if !strings.HasPrefix(s, "{{") {
+		return nil, errInvalid
+	}
+	s = s[2:]
+
+	next := nextDelimiter(s)
+	if next == -1 {
+		return nil, errInvalid
+	}
+
+	name := strings.TrimSpace(s[:next])
+	if strings.HasPrefix(name, "Template:") ||
+		strings.HasPrefix(name, "template:") {
+		name = name[9:]
+	}
+	if name != "Subpage" && name != "subpage" {
+		return nil, errInvalid
+	}
+	s = s[next:]
+
+	sp := &subpage{}
+	for len(s) > 2 {
+		// Disallow nested templates by only accepting "|".
+		if !strings.HasPrefix(s, "|") {
+			return nil, errInvalid
+		}
+		s = s[1:]
+
+		next := nextDelimiter(s)
+		if next == -1 {
+			return nil, errInvalid
+		}
+
+		switch name, value := parseParameter(s[:next]); name {
+		case "page":
+			sp.page = value
+		}
+
+		s = s[next:]
+	}
+	if s != "}}" {
+		return nil, errInvalid
+	}
+
+	if sp.page == "" {
+		return nil, fmt.Errorf("empty page value")
+	}
+	return sp, nil
 }
