@@ -176,11 +176,11 @@ func TestParseCard(t *testing.T) {
 }
 
 func TestParseSubpage(t *testing.T) {
-	var sp1 = &subpage{page: "Cards 1-100"}
+	var sp1 = &Subpage{Page: "Cards 1-100"}
 
 	for _, test := range []struct {
 		s  string
-		sp *subpage
+		sp *Subpage
 	}{
 		{"", nil},
 		{"{{}}", nil},
@@ -203,23 +203,26 @@ func TestParseSubpage(t *testing.T) {
 		{"{{Template:Subpage|page=Cards 1-100}}", sp1},
 		{"{{Subpage || hide = true | page=Cards 1-100 }}", sp1},
 	} {
-		sp, err := parseSubpage(test.s)
+		sp, err := ParseSubpage(test.s)
 		if !reflect.DeepEqual(sp, test.sp) || (err != nil) != (sp == nil) {
-			t.Errorf("parseSubpage(%q): got %v, %v; want %v",
+			t.Errorf("ParseSubpage(%q): got %v, %v; want %v",
 				test.s, sp, err, test.sp,
 			)
 		}
 	}
 }
 
-func TestParseDeck(t *testing.T) {
+func TestParsePage(t *testing.T) {
 	for _, test := range []struct {
-		s     string
-		cards []*Card
+		s        string
+		cards    []*Card
+		subpages []*Subpage
 	}{
-		{"", nil},
-		{"{{card", nil},
-		{"{{card}}", []*Card{{BGColor: otherGray}}},
+		{"", nil, nil},
+		{"{{Subpage}}", nil, nil},
+		{"{{card", nil, nil},
+		{"{{card}}", []*Card{{BGColor: otherGray}}, nil},
+		{"{{Subpage|page=Cards 1-100}}", nil, []*Subpage{{Page: "Cards 1-100"}}},
 		{
 			`{{card|title=A|text={{card|title=B|type=Thing}}card|type=Action}}
 			{{card|title=C}}`,
@@ -227,6 +230,7 @@ func TestParseDeck(t *testing.T) {
 				{Title: "B", Type: "Thing", BGColor: thingBlue},
 				{Title: "C", BGColor: otherGray},
 			},
+			nil,
 		},
 		{
 			`
@@ -241,9 +245,13 @@ func TestParseDeck(t *testing.T) {
 				{Title: "C", Type: "Letter", BGColor: otherGray},
 				{Title: "E", BGColor: otherGray},
 			},
+			nil,
 		},
 		{
 			`
+				{{Subpage || hide = true | page=Cards 1-100 }}
+				{{Subpage || hide = true | page=Cards 101-200 }}
+				{{Subpage || hide = true }}
 				{{card|title=A|type=Action|bgcolor=900}}
 				<!-- {{card|title=|type=Action|text=|creator=|bgcolor=600}} -->
 				<!-- {{card|title=|type=Thing|text=|creator=|bgcolor=006}} -->
@@ -253,12 +261,17 @@ func TestParseDeck(t *testing.T) {
 				{Title: "A", Type: "Action", BGColor: &color.RGBA{153, 0, 0, 255}},
 				{Title: "B", Type: "Thing", BGColor: &color.RGBA{0, 153, 0, 255}},
 			},
+			[]*Subpage{
+				{Page: "Cards 1-100"},
+				{Page: "Cards 101-200"},
+			},
 		},
 	} {
-		cards := ParseDeck(test.s)
-		if !reflect.DeepEqual(cards, test.cards) {
-			t.Errorf("ParseDeck(%q): got %v, want %v",
-				test.s, cards, test.cards,
+		cards, subpages := ParsePage(test.s)
+		if !reflect.DeepEqual(cards, test.cards) ||
+			!reflect.DeepEqual(subpages, test.subpages) {
+			t.Errorf("ParsePage(%q): got %v, %v; want %v, %v",
+				test.s, cards, subpages, test.cards, test.subpages,
 			)
 		}
 	}

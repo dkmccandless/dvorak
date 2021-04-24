@@ -57,8 +57,9 @@ type Card struct {
 	MiniCard string
 }
 
-// ParseDeck parses a list of Template:Card values.
-func ParseDeck(s string) []*Card {
+// ParsePage parses a page of wiki source code
+// and returns its Cards and Subpages.
+func ParsePage(s string) ([]*Card, []*Subpage) {
 	// Elide wiki hidden text
 	for {
 		op := strings.Index(s, "<!--")
@@ -73,6 +74,7 @@ func ParseDeck(s string) []*Card {
 	}
 
 	var cards []*Card
+	var subpages []*Subpage
 	for {
 		cl := strings.Index(s, "}}")
 		if cl == -1 {
@@ -84,13 +86,15 @@ func ParseDeck(s string) []*Card {
 			continue
 		}
 
-		c, err := ParseCard(s[op : cl+2])
-		if err == nil {
+		t := s[op : cl+2]
+		if c, err := ParseCard(t); err == nil {
 			cards = append(cards, c)
+		} else if sp, err := ParseSubpage(t); err == nil {
+			subpages = append(subpages, sp)
 		}
 		s = s[cl+2:]
 	}
-	return cards
+	return cards, subpages
 }
 
 // ParseCard parses a single instance of Template:Card source code.
@@ -260,14 +264,16 @@ func nextDelimiter(s string) int {
 	return lenbr + next
 }
 
-// subpage is a subpage of a Dvorak deck page.
-type subpage struct {
+// Subpage is a subpage of a Dvorak deck.
+type Subpage struct {
 	// http://dvorakgame.co.uk/index.php/Template:Subpage
-	page string
+
+	// Page is the subpage's relative URL.
+	Page string
 }
 
-// parseSubpage parses a single instance of Template:Subpage source code.
-func parseSubpage(s string) (*subpage, error) {
+// ParseSubpage parses a single instance of Template:Subpage source code.
+func ParseSubpage(s string) (*Subpage, error) {
 	var errInvalid = errors.New("invalid syntax")
 
 	if !strings.HasPrefix(s, "{{") {
@@ -290,7 +296,7 @@ func parseSubpage(s string) (*subpage, error) {
 	}
 	s = s[next:]
 
-	sp := &subpage{}
+	sp := &Subpage{}
 	for len(s) > 2 {
 		// Disallow nested templates by only accepting "|".
 		if !strings.HasPrefix(s, "|") {
@@ -305,7 +311,7 @@ func parseSubpage(s string) (*subpage, error) {
 
 		switch name, value := parseParameter(s[:next]); name {
 		case "page":
-			sp.page = value
+			sp.Page = value
 		}
 
 		s = s[next:]
@@ -314,7 +320,7 @@ func parseSubpage(s string) (*subpage, error) {
 		return nil, errInvalid
 	}
 
-	if sp.page == "" {
+	if sp.Page == "" {
 		return nil, fmt.Errorf("empty page value")
 	}
 	return sp, nil
