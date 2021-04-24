@@ -9,6 +9,15 @@ import (
 	"strings"
 )
 
+// Page contains the template information of a Dvorak wiki page.
+type Page struct {
+	// Subpages lists the page's Subpages, which may contain other Cards.
+	Subpages []*Subpage
+
+	// Cards lists the page's Cards.
+	Cards []*Card
+}
+
 // Card is a Dvorak card.
 type Card struct {
 	// http://dvorakgame.co.uk/index.php/Template:Card
@@ -57,9 +66,8 @@ type Card struct {
 	MiniCard string
 }
 
-// ParsePage parses a page of wiki source code
-// and returns its Cards and Subpages.
-func ParsePage(s string) ([]*Card, []*Subpage) {
+// ParsePage parses a page of wiki source code.
+func ParsePage(s string) *Page {
 	// Elide wiki hidden text
 	for {
 		op := strings.Index(s, "<!--")
@@ -73,8 +81,7 @@ func ParsePage(s string) ([]*Card, []*Subpage) {
 		s = s[:op] + s[op+cl+3:]
 	}
 
-	var cards []*Card
-	var subpages []*Subpage
+	p := &Page{}
 	for {
 		cl := strings.Index(s, "}}")
 		if cl == -1 {
@@ -88,13 +95,13 @@ func ParsePage(s string) ([]*Card, []*Subpage) {
 
 		t := s[op : cl+2]
 		if c, err := ParseCard(t); err == nil {
-			cards = append(cards, c)
+			p.Cards = append(p.Cards, c)
 		} else if sp, err := ParseSubpage(t); err == nil {
-			subpages = append(subpages, sp)
+			p.Subpages = append(p.Subpages, sp)
 		}
 		s = s[cl+2:]
 	}
-	return cards, subpages
+	return p
 }
 
 // ParseCard parses a single instance of Template:Card source code.

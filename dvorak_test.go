@@ -214,23 +214,26 @@ func TestParseSubpage(t *testing.T) {
 
 func TestParsePage(t *testing.T) {
 	for _, test := range []struct {
-		s        string
-		cards    []*Card
-		subpages []*Subpage
+		s string
+		p *Page
 	}{
-		{"", nil, nil},
-		{"{{Subpage}}", nil, nil},
-		{"{{card", nil, nil},
-		{"{{card}}", []*Card{{BGColor: otherGray}}, nil},
-		{"{{Subpage|page=Cards 1-100}}", nil, []*Subpage{{Page: "Cards 1-100"}}},
+		{"", &Page{}},
+		{"{{Subpage}}", &Page{}},
+		{"{{card", &Page{}},
+		{"{{card}}", &Page{Cards: []*Card{{BGColor: otherGray}}}},
+		{
+			"{{Subpage|page=Cards 1-100}}",
+			&Page{Subpages: []*Subpage{{Page: "Cards 1-100"}}},
+		},
 		{
 			`{{card|title=A|text={{card|title=B|type=Thing}}card|type=Action}}
 			{{card|title=C}}`,
-			[]*Card{
-				{Title: "B", Type: "Thing", BGColor: thingBlue},
-				{Title: "C", BGColor: otherGray},
+			&Page{
+				Cards: []*Card{
+					{Title: "B", Type: "Thing", BGColor: thingBlue},
+					{Title: "C", BGColor: otherGray},
+				},
 			},
-			nil,
 		},
 		{
 			`
@@ -240,12 +243,13 @@ func TestParsePage(t *testing.T) {
 				{{card|title=D
 				{{card|title=E}}
 			`,
-			[]*Card{
-				{Title: "A", Type: "Action", BGColor: actionRed},
-				{Title: "C", Type: "Letter", BGColor: otherGray},
-				{Title: "E", BGColor: otherGray},
+			&Page{
+				Cards: []*Card{
+					{Title: "A", Type: "Action", BGColor: actionRed},
+					{Title: "C", Type: "Letter", BGColor: otherGray},
+					{Title: "E", BGColor: otherGray},
+				},
 			},
-			nil,
 		},
 		{
 			`
@@ -257,21 +261,30 @@ func TestParsePage(t *testing.T) {
 				<!-- {{card|title=|type=Thing|text=|creator=|bgcolor=006}} -->
 				{{card|title=B|type=Thing|bgcolor=090}}
 			`,
-			[]*Card{
-				{Title: "A", Type: "Action", BGColor: &color.RGBA{153, 0, 0, 255}},
-				{Title: "B", Type: "Thing", BGColor: &color.RGBA{0, 153, 0, 255}},
-			},
-			[]*Subpage{
-				{Page: "Cards 1-100"},
-				{Page: "Cards 101-200"},
+			&Page{
+				Subpages: []*Subpage{
+					{Page: "Cards 1-100"},
+					{Page: "Cards 101-200"},
+				},
+				Cards: []*Card{
+					{
+						Title:   "A",
+						Type:    "Action",
+						BGColor: &color.RGBA{153, 0, 0, 255},
+					},
+					{
+						Title:   "B",
+						Type:    "Thing",
+						BGColor: &color.RGBA{0, 153, 0, 255},
+					},
+				},
 			},
 		},
 	} {
-		cards, subpages := ParsePage(test.s)
-		if !reflect.DeepEqual(cards, test.cards) ||
-			!reflect.DeepEqual(subpages, test.subpages) {
-			t.Errorf("ParsePage(%q): got %v, %v; want %v, %v",
-				test.s, cards, subpages, test.cards, test.subpages,
+		p := ParsePage(test.s)
+		if !reflect.DeepEqual(p, test.p) {
+			t.Errorf("ParsePage(%q): got %v; want %v",
+				test.s, p, test.p,
 			)
 		}
 	}
