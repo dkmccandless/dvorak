@@ -2,9 +2,7 @@ package dvorak
 
 import (
 	"encoding/hex"
-	"errors"
 	"image/color"
-	"strings"
 )
 
 // Card is a Dvorak card.
@@ -55,93 +53,26 @@ type Card struct {
 	MiniCard string
 }
 
-// ParseCard parses a single instance of Template:Card source code.
-func ParseCard(s string) (*Card, error) {
-	// https://meta.wikimedia.org/wiki/Help:Template
-
-	var errInvalid = errors.New("invalid syntax")
-
-	if !strings.HasPrefix(s, "{{") {
-		return nil, errInvalid
+// PopulateCard returns a Card populated with params.
+func PopulateCard(params map[string]string) Card {
+	c := Card{
+		Title:       params["title"],
+		LongTitle:   params["longtitle"],
+		Text:        params["text"],
+		LongText:    params["longtext"],
+		Type:        params["type"],
+		BGColor:     parseRGB(params["bgcolor"]),
+		CornerValue: params["cornervalue"],
+		Image:       params["image"],
+		ImgBack:     parseRGB(params["imgback"]),
+		FlavorText:  params["flavortext"],
+		Creator:     params["creator"],
+		MiniCard:    params["minicard"],
 	}
-	s = s[2:]
-
-	next := nextDelimiter(s)
-	if next == -1 {
-		return nil, errInvalid
-	}
-
-	name := strings.TrimSpace(s[:next])
-	if strings.HasPrefix(name, "Template:") ||
-		strings.HasPrefix(name, "template:") {
-		name = name[9:]
-	}
-	if name != "Card" && name != "card" {
-		return nil, errInvalid
-	}
-	s = s[next:]
-
-	c := &Card{}
-	for len(s) > 2 {
-		// Disallow nested templates by only accepting "|".
-		if !strings.HasPrefix(s, "|") {
-			return nil, errInvalid
-		}
-		s = s[1:]
-
-		next := nextDelimiter(s)
-		if next == -1 {
-			return nil, errInvalid
-		}
-
-		switch name, value := parseParameter(s[:next]); name {
-		case "title":
-			c.Title = value
-		case "longtitle":
-			c.LongTitle = value
-		case "text":
-			c.Text = value
-		case "longtext":
-			c.LongText = value
-		case "type":
-			c.Type = value
-		case "bgcolor":
-			c.BGColor = parseRGB(value)
-		case "cornervalue":
-			c.CornerValue = value
-		case "image":
-			c.Image = value
-		case "imgback":
-			c.ImgBack = parseRGB(value)
-		case "flavortext":
-			c.FlavorText = value
-		case "creator":
-			c.Creator = value
-		case "minicard":
-			c.MiniCard = value
-		}
-
-		s = s[next:]
-	}
-	if s != "}}" {
-		return nil, errInvalid
-	}
-
 	if c.BGColor == nil {
 		c.BGColor = defaultBGColor(c.Type)
 	}
-	return c, nil
-}
-
-// parseParameter parses a named template parameter.
-// Whitespace is trimmed from the returned strings.
-// If s does not contain "=", parseParameter returns "", "" instead.
-func parseParameter(s string) (name, value string) {
-	eq := strings.Index(s, "=")
-	if eq == -1 {
-		return
-	}
-	return strings.TrimSpace(s[:eq]), strings.TrimSpace(s[eq+1:])
+	return c
 }
 
 // parseRGB parses a hex string and returns the corresponding color.
@@ -178,46 +109,4 @@ func defaultBGColor(typ string) *color.RGBA {
 	default:
 		return otherGray
 	}
-}
-
-// nextDelimiter returns the index of the first delimiter character at the end
-// of the first field in s. This is the first instance of "|" not contained
-// within a matching pair of double brackets, or else the first "}}".
-func nextDelimiter(s string) int {
-	// minExists returns its smallest non-negative argument,
-	// or -1 if both arguments are negative.
-	minExists := func(x, y int) int {
-		switch {
-		case x < 0:
-			if y < 0 {
-				return -1
-			}
-			return y
-		case y < 0, x < y:
-			return x
-		default:
-			return y
-		}
-	}
-
-	lbr := strings.Index(s, "[[")
-	pipe := strings.Index(s, "|")
-	cl := strings.Index(s, "}}")
-
-	if minExists(lbr, pipe) == pipe || minExists(lbr, cl) == cl {
-		return minExists(pipe, cl)
-	}
-
-	// Left double bracket occurs first; find the next right double bracket.
-	rbroffset := strings.Index(s[lbr:], "]]")
-	if rbroffset == -1 {
-		return minExists(pipe, cl)
-	}
-
-	lenbr := lbr + rbroffset + 2
-	next := nextDelimiter(s[lenbr:])
-	if next == -1 {
-		return -1
-	}
-	return lenbr + next
 }

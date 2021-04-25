@@ -5,38 +5,26 @@ import (
 	"testing"
 )
 
-func TestParseSubpage(t *testing.T) {
-	var sp1 = &Subpage{Page: "Cards 1-100"}
-
+func TestPopulateSubpage(t *testing.T) {
 	for _, test := range []struct {
-		s  string
-		sp *Subpage
+		params map[string]string
+		sp     Subpage
 	}{
-		{"", nil},
-		{"{{}}", nil},
-		{"{{subpage  ", nil},
-		{"{{subpage||", nil},
-		{"{{SUBPAGE}}", nil},
-		{"{{subpage|ABC}}", nil},
-		{"{{subpage|page=ABC", nil},
-		{"{{subpage|page=ABC}}|page=DEF", nil},
-		{"{{subpage|page=ABC}}{{subpage|page=DEF}}", nil},
-
-		{"{{subpage|page=Cards 1-100}}", sp1},
-		{"{{Subpage|page=Cards 1-100}}", sp1},
-		{"{{subpage |page=Cards 1-100}}", sp1},
-		{"{{ subpage|page=Cards 1-100}}", sp1},
-		{"{{\nsubpage\n|page=Cards 1-100}}", sp1},
-		{"{{template:subpage|page=Cards 1-100}}", sp1},
-		{"{{template:Subpage|page=Cards 1-100}}", sp1},
-		{"{{Template:subpage|page=Cards 1-100}}", sp1},
-		{"{{Template:Subpage|page=Cards 1-100}}", sp1},
-		{"{{Subpage || hide = true | page=Cards 1-100 }}", sp1},
+		{map[string]string{}, Subpage{}},
+		{map[string]string{"page": ""}, Subpage{}},
+		{
+			map[string]string{"page": "Cards 1-100"},
+			Subpage{Page: "Cards 1-100"},
+		},
+		{
+			map[string]string{"": "", "hide": "true", "page": "Cards 1-100"},
+			Subpage{Page: "Cards 1-100"},
+		},
 	} {
-		sp, err := ParseSubpage(test.s)
-		if !reflect.DeepEqual(sp, test.sp) || (err != nil) != (sp == nil) {
-			t.Errorf("ParseSubpage(%q): got %v, %v; want %v",
-				test.s, sp, err, test.sp,
+		sp, err := PopulateSubpage(test.params)
+		if !reflect.DeepEqual(sp, test.sp) || (err != nil) != (sp == Subpage{}) {
+			t.Errorf("PopulateSubpage(%v): got %v, %v; want %v",
+				test.params, sp, err, test.sp,
 			)
 		}
 	}

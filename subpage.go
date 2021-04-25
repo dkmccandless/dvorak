@@ -1,69 +1,25 @@
 package dvorak
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 )
 
 // Subpage is a subpage of a Dvorak deck.
+// If a deck has subpages, parse their cards in order first,
+// followed by the cards on the main page.
 type Subpage struct {
 	// http://dvorakgame.co.uk/index.php/Template:Subpage
 
-	// Page is the subpage's relative URL.
+	// Page is the subpage's URL relative to the main page.
 	Page string
 }
 
-// ParseSubpage parses a single instance of Template:Subpage source code.
-func ParseSubpage(s string) (*Subpage, error) {
-	var errInvalid = errors.New("invalid syntax")
-
-	if !strings.HasPrefix(s, "{{") {
-		return nil, errInvalid
-	}
-	s = s[2:]
-
-	next := nextDelimiter(s)
-	if next == -1 {
-		return nil, errInvalid
-	}
-
-	name := strings.TrimSpace(s[:next])
-	if strings.HasPrefix(name, "Template:") ||
-		strings.HasPrefix(name, "template:") {
-		name = name[9:]
-	}
-	if name != "Subpage" && name != "subpage" {
-		return nil, errInvalid
-	}
-	s = s[next:]
-
-	sp := &Subpage{}
-	for len(s) > 2 {
-		// Disallow nested templates by only accepting "|".
-		if !strings.HasPrefix(s, "|") {
-			return nil, errInvalid
-		}
-		s = s[1:]
-
-		next := nextDelimiter(s)
-		if next == -1 {
-			return nil, errInvalid
-		}
-
-		switch name, value := parseParameter(s[:next]); name {
-		case "page":
-			sp.Page = value
-		}
-
-		s = s[next:]
-	}
-	if s != "}}" {
-		return nil, errInvalid
-	}
-
+// PopulateSubpage returns a Subpage populated with params.
+func PopulateSubpage(params map[string]string) (Subpage, error) {
+	var sp Subpage
+	sp.Page = params["page"]
 	if sp.Page == "" {
-		return nil, fmt.Errorf("empty page value")
+		return Subpage{}, fmt.Errorf("empty page value")
 	}
 	return sp, nil
 }
