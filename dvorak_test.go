@@ -176,10 +176,11 @@ func TestParsePage(t *testing.T) {
 			},
 		},
 	} {
-		p := parsePage(test.s)
+		b := []byte(test.s)
+		p := parsePage(b)
 		if !reflect.DeepEqual(p, test.p) {
-			t.Errorf("parsePage(%q): got %v; want %v",
-				test.s, p, test.p,
+			t.Errorf("parsePage(%v): got %v; want %v",
+				b, p, test.p,
 			)
 		}
 	}

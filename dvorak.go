@@ -3,20 +3,77 @@ package dvorak
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
 	"strings"
 )
 
 // page contains the template information of a Dvorak wiki page.
 type page struct {
-	// subpages lists any subpages of the main page.
+	// subpages lists any subpages of the page.
 	subpages []subpage
 
-	// cards lists the main page's cards.
+	// cards lists the page's cards.
 	cards []Card
 }
 
+// Get returns the source code of a Dvorak deck,
+// beginning with its subpages in order, if any.
+func Get(rawURL string) ([]byte, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	if host := u.Hostname(); strings.ToLower(host) != "dvorakgame.co.uk" {
+		return nil, fmt.Errorf("invalid host %q", host)
+	}
+	u.RawQuery = "action=raw"
+	path := u.EscapedPath()
+
+	main, err := readPage(u.String())
+	if err != nil {
+		return nil, err
+	}
+	var b []byte
+	for _, sp := range parsePage(main).subpages {
+		log.Print(sp.page)
+		u.Path = path + "/" + sp.page
+		sb, err := readPage(u.String())
+		if err != nil {
+			return nil, err
+		}
+		b = append(b, sb...)
+	}
+
+	return append(b, main...), nil
+}
+
+// readPage returns the body of the page at url.
+// It returns an error if url cannot be accessed or read from.
+func readPage(url string) ([]byte, error) {
+	r, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%v: status %v", url, r.StatusCode)
+	}
+	defer r.Body.Close()
+
+	return io.ReadAll(r.Body)
+}
+
+// Parse returns the Cards in b.
+func Parse(b []byte) []Card {
+	return parsePage(b).cards
+}
+
 // parsePage parses a page of wiki source code.
-func parsePage(s string) page {
+func parsePage(b []byte) page {
+	s := string(b)
+
 	// Elide wiki hidden text
 	for {
 		op := strings.Index(s, "<!--")
