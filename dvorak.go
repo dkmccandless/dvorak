@@ -43,7 +43,7 @@ func ParsePage(s string) *Page {
 		}
 		switch name {
 		case "Card", "card":
-			p.Cards = append(p.Cards, PopulateCard(params))
+			p.Cards = append(p.Cards, withDefaultColor(PopulateCard(params)))
 		case "Subpage", "subpage":
 			sp, err := PopulateSubpage(params)
 			if err != nil {

@@ -32,35 +32,30 @@ func TestParseRGB(t *testing.T) {
 }
 
 func TestPopulateCard(t *testing.T) {
-	var blank = Card{BGColor: otherGray}
-
 	for _, test := range []struct {
 		params map[string]string
 		c      Card
 	}{
-		{nil, blank},
-		{map[string]string{"": ""}, blank},
-		{map[string]string{"": "ABC"}, blank},
-		{map[string]string{"ABC": ""}, blank},
-		{map[string]string{"title": "ABC"}, Card{Title: "ABC", BGColor: otherGray}},
-		{map[string]string{"longtitle": "y"}, Card{LongTitle: "y", BGColor: otherGray}},
-		{map[string]string{"text": "ABC"}, Card{Text: "ABC", BGColor: otherGray}},
-		{map[string]string{"longtext": "y"}, Card{LongText: "y", BGColor: otherGray}},
-		{map[string]string{"type": "Action"}, Card{Type: "Action", BGColor: actionRed}},
-		{map[string]string{"type": "Thing"}, Card{Type: "Thing", BGColor: thingBlue}},
-		{map[string]string{"type": "Action - Song"}, Card{Type: "Action - Song", BGColor: otherGray}},
-		{map[string]string{"type": "Thing - Moon"}, Card{Type: "Thing - Moon", BGColor: otherGray}},
+		{nil, Card{}},
+		{map[string]string{"": ""}, Card{}},
+		{map[string]string{"": "ABC"}, Card{}},
+		{map[string]string{"ABC": ""}, Card{}},
+		{map[string]string{"title": "ABC"}, Card{Title: "ABC"}},
+		{map[string]string{"longtitle": "y"}, Card{LongTitle: "y"}},
+		{map[string]string{"text": "ABC"}, Card{Text: "ABC"}},
+		{map[string]string{"longtext": "y"}, Card{LongText: "y"}},
+		{map[string]string{"type": "Action"}, Card{Type: "Action"}},
 		{map[string]string{"bgcolor": "600"}, Card{BGColor: actionRed}},
 		{map[string]string{"bgcolor": "006"}, Card{BGColor: thingBlue}},
 		{map[string]string{"bgcolor": "666"}, Card{BGColor: otherGray}},
 		{map[string]string{"bgcolor": "000"}, Card{BGColor: &color.RGBA{A: 255}}},
 		{map[string]string{"bgcolor": "FFF"}, Card{BGColor: &color.RGBA{255, 255, 255, 255}}},
-		{map[string]string{"cornervalue": "4"}, Card{CornerValue: "4", BGColor: otherGray}},
-		{map[string]string{"image": "ABC.png"}, Card{Image: "ABC.png", BGColor: otherGray}},
-		{map[string]string{"imgback": "FFD700"}, Card{ImgBack: &color.RGBA{255, 215, 0, 255}, BGColor: otherGray}},
-		{map[string]string{"flavortext": "ABC"}, Card{FlavorText: "ABC", BGColor: otherGray}},
-		{map[string]string{"creator": "ABC"}, Card{Creator: "ABC", BGColor: otherGray}},
-		{map[string]string{"minicard": "y"}, Card{MiniCard: "y", BGColor: otherGray}},
+		{map[string]string{"cornervalue": "4"}, Card{CornerValue: "4"}},
+		{map[string]string{"image": "ABC.png"}, Card{Image: "ABC.png"}},
+		{map[string]string{"imgback": "FFD700"}, Card{ImgBack: &color.RGBA{255, 215, 0, 255}}},
+		{map[string]string{"flavortext": "ABC"}, Card{FlavorText: "ABC"}},
+		{map[string]string{"creator": "ABC"}, Card{Creator: "ABC"}},
+		{map[string]string{"minicard": "y"}, Card{MiniCard: "y"}},
 		{
 			map[string]string{
 				"title":   "A",
@@ -106,6 +101,42 @@ func TestPopulateCard(t *testing.T) {
 		if !reflect.DeepEqual(c, test.c) {
 			t.Errorf("PopulateCard(%v): got %v, want %v",
 				test.params, c, test.c,
+			)
+		}
+	}
+}
+
+func TestWithDefaultColor(t *testing.T) {
+	for _, test := range []struct{ in, c Card }{
+		{Card{}, Card{BGColor: otherGray}},
+		{Card{Type: "Special"}, Card{Type: "Special", BGColor: otherGray}},
+		{Card{Type: "Action"}, Card{Type: "Action", BGColor: actionRed}},
+		{Card{Type: "Thing"}, Card{Type: "Thing", BGColor: thingBlue}},
+		{
+			Card{Type: "Action - Song"},
+			Card{Type: "Action - Song", BGColor: otherGray},
+		},
+		{
+			Card{Type: "Thing - Moon"},
+			Card{Type: "Thing - Moon", BGColor: otherGray},
+		},
+		{
+			Card{Type: "Action", BGColor: thingBlue},
+			Card{Type: "Action", BGColor: thingBlue},
+		},
+		{
+			Card{Type: "Thing", BGColor: actionRed},
+			Card{Type: "Thing", BGColor: actionRed},
+		},
+		{
+			Card{Type: "Void", BGColor: &color.RGBA{A: 255}},
+			Card{Type: "Void", BGColor: &color.RGBA{A: 255}},
+		},
+	} {
+		c := withDefaultColor(test.in)
+		if !reflect.DeepEqual(c, test.c) {
+			t.Errorf("withDefaultColor(%v): got %v, want %v",
+				test.in, c, test.c,
 			)
 		}
 	}

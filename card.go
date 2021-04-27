@@ -69,11 +69,30 @@ func PopulateCard(params map[string]string) Card {
 		Creator:     params["creator"],
 		MiniCard:    params["minicard"],
 	}
+	return c
+}
+
+// withDefaultColor adds a default background color to c if it has none.
+func withDefaultColor(c Card) Card {
 	if c.BGColor == nil {
-		c.BGColor = defaultBGColor(c.Type)
+		switch c.Type {
+		case "Action":
+			c.BGColor = actionRed
+		case "Thing":
+			c.BGColor = thingBlue
+		default:
+			c.BGColor = otherGray
+		}
 	}
 	return c
 }
+
+// Default header background colors
+var (
+	actionRed = parseRGB("600")
+	thingBlue = parseRGB("006")
+	otherGray = parseRGB("666")
+)
 
 // parseRGB parses a hex string and returns the corresponding color.
 // The string must be length 3 or 6 and contain only hexadecimal characters.
@@ -90,23 +109,4 @@ func parseRGB(s string) *color.RGBA {
 		return nil
 	}
 	return &color.RGBA{rgb[0], rgb[1], rgb[2], 255}
-}
-
-// Default header background colors
-var (
-	actionRed = parseRGB("600")
-	thingBlue = parseRGB("006")
-	otherGray = parseRGB("666")
-)
-
-// defaultBGColor returns the default header background color for typ.
-func defaultBGColor(typ string) *color.RGBA {
-	switch typ {
-	case "Action":
-		return actionRed
-	case "Thing":
-		return thingBlue
-	default:
-		return otherGray
-	}
 }
