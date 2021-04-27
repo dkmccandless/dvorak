@@ -53,8 +53,8 @@ type Card struct {
 	MiniCard string
 }
 
-// PopulateCard returns a Card populated with params.
-func PopulateCard(params map[string]string) Card {
+// populateCard returns a Card populated with params.
+func populateCard(params map[string]string) Card {
 	c := Card{
 		Title:       params["title"],
 		LongTitle:   params["longtitle"],

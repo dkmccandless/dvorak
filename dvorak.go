@@ -6,17 +6,17 @@ import (
 	"strings"
 )
 
-// Page contains the template information of a Dvorak wiki page.
-type Page struct {
-	// Subpages lists any subpages of the main page.
-	Subpages []Subpage
+// page contains the template information of a Dvorak wiki page.
+type page struct {
+	// subpages lists any subpages of the main page.
+	subpages []subpage
 
-	// Cards lists the main page's cards.
-	Cards []Card
+	// cards lists the main page's cards.
+	cards []Card
 }
 
-// ParsePage parses a page of wiki source code.
-func ParsePage(s string) *Page {
+// parsePage parses a page of wiki source code.
+func parsePage(s string) page {
 	// Elide wiki hidden text
 	for {
 		op := strings.Index(s, "<!--")
@@ -30,7 +30,7 @@ func ParsePage(s string) *Page {
 		s = s[:op] + s[op+cl+3:]
 	}
 
-	p := &Page{}
+	p := page{}
 	for _, s := range strings.SplitAfter(s, "}}") {
 		op := strings.LastIndex(s, "{{")
 		if op == -1 {
@@ -43,13 +43,13 @@ func ParsePage(s string) *Page {
 		}
 		switch name {
 		case "Card", "card":
-			p.Cards = append(p.Cards, withDefaultColor(PopulateCard(params)))
+			p.cards = append(p.cards, withDefaultColor(populateCard(params)))
 		case "Subpage", "subpage":
-			sp, err := PopulateSubpage(params)
+			sp, err := populateSubpage(params)
 			if err != nil {
 				continue
 			}
-			p.Subpages = append(p.Subpages, sp)
+			p.subpages = append(p.subpages, sp)
 		}
 	}
 	return p

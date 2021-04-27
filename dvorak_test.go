@@ -110,21 +110,21 @@ func TestParseTemplate(t *testing.T) {
 func TestParsePage(t *testing.T) {
 	for _, test := range []struct {
 		s string
-		p *Page
+		p page
 	}{
-		{"", &Page{}},
-		{"{{Subpage}}", &Page{}},
-		{"{{card", &Page{}},
-		{"{{card}}", &Page{Cards: []Card{{BGColor: otherGray}}}},
+		{"", page{}},
+		{"{{Subpage}}", page{}},
+		{"{{card", page{}},
+		{"{{card}}", page{cards: []Card{{BGColor: otherGray}}}},
 		{
 			"{{Subpage|page=Cards 1-100}}",
-			&Page{Subpages: []Subpage{{Page: "Cards 1-100"}}},
+			page{subpages: []subpage{{page: "Cards 1-100"}}},
 		},
 		{
 			`{{card|title=A|text={{card|title=B|type=Thing}}card|type=Action}}
 			{{card|title=C}}`,
-			&Page{
-				Cards: []Card{
+			page{
+				cards: []Card{
 					{Title: "B", Type: "Thing", BGColor: thingBlue},
 					{Title: "C", BGColor: otherGray},
 				},
@@ -138,8 +138,8 @@ func TestParsePage(t *testing.T) {
 				{{card|title=D
 				{{card|title=E}}
 			`,
-			&Page{
-				Cards: []Card{
+			page{
+				cards: []Card{
 					{Title: "A", Type: "Action", BGColor: actionRed},
 					{Title: "C", Type: "Letter", BGColor: otherGray},
 					{Title: "E", BGColor: otherGray},
@@ -156,12 +156,12 @@ func TestParsePage(t *testing.T) {
 				<!-- {{card|title=|type=Thing|text=|creator=|bgcolor=006}} -->
 				{{card|title=B|type=Thing|bgcolor=090}}
 			`,
-			&Page{
-				Subpages: []Subpage{
-					{Page: "Cards 1-100"},
-					{Page: "Cards 101-200"},
+			page{
+				subpages: []subpage{
+					{page: "Cards 1-100"},
+					{page: "Cards 101-200"},
 				},
-				Cards: []Card{
+				cards: []Card{
 					{
 						Title:   "A",
 						Type:    "Action",
@@ -176,9 +176,9 @@ func TestParsePage(t *testing.T) {
 			},
 		},
 	} {
-		p := ParsePage(test.s)
+		p := parsePage(test.s)
 		if !reflect.DeepEqual(p, test.p) {
-			t.Errorf("ParsePage(%q): got %v; want %v",
+			t.Errorf("parsePage(%q): got %v; want %v",
 				test.s, p, test.p,
 			)
 		}

@@ -97,9 +97,9 @@ func TestPopulateCard(t *testing.T) {
 			},
 		},
 	} {
-		c := PopulateCard(test.params)
+		c := populateCard(test.params)
 		if !reflect.DeepEqual(c, test.c) {
-			t.Errorf("PopulateCard(%v): got %v, want %v",
+			t.Errorf("populateCard(%v): got %v, want %v",
 				test.params, c, test.c,
 			)
 		}
