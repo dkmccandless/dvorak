@@ -1,8 +1,10 @@
 package dvorak
 
-import (
-	"encoding/hex"
-	"image/color"
+// Default header background colors
+const (
+	actionRed = "600"
+	thingBlue = "006"
+	otherGray = "666"
 )
 
 // Card is a Dvorak card.
@@ -26,9 +28,10 @@ type Card struct {
 	// Type is the card's type, usually "Action" or "Thing".
 	Type string
 
-	// BGColor is the color of the card header background.
-	// If omitted, ParseCard sets a default value according to the card type.
-	BGColor *color.RGBA
+	// BGColor is the color of the card header background,
+	// as a three- or six-digit hex triplet.
+	// If omitted, Parse sets a default value according to the card type.
+	BGColor string
 
 	// CornerValue is an optional value to print in the card's top right corner.
 	CornerValue string
@@ -36,8 +39,9 @@ type Card struct {
 	// Image is the filename of an image for the card.
 	Image string
 
-	// ImgBack is the optional color to be shown behind the card image.
-	ImgBack *color.RGBA
+	// ImgBack is the optional color to be shown behind the card image,
+	// as a three- or six-digit hex triplet.
+	ImgBack string
 
 	// FlavorText is the card's flavor text. If not empty, this is displayed
 	// under the rule text, separated by a horizontal line.
@@ -55,26 +59,25 @@ type Card struct {
 
 // populateCard returns a Card populated with params.
 func populateCard(params map[string]string) Card {
-	c := Card{
+	return Card{
 		Title:       params["title"],
 		LongTitle:   params["longtitle"],
 		Text:        params["text"],
 		LongText:    params["longtext"],
 		Type:        params["type"],
-		BGColor:     parseRGB(params["bgcolor"]),
+		BGColor:     params["bgcolor"],
 		CornerValue: params["cornervalue"],
 		Image:       params["image"],
-		ImgBack:     parseRGB(params["imgback"]),
+		ImgBack:     params["imgback"],
 		FlavorText:  params["flavortext"],
 		Creator:     params["creator"],
 		MiniCard:    params["minicard"],
 	}
-	return c
 }
 
 // withDefaultColor adds a default background color to c if it has none.
 func withDefaultColor(c Card) Card {
-	if c.BGColor == nil {
+	if c.BGColor == "" {
 		switch c.Type {
 		case "Action":
 			c.BGColor = actionRed
@@ -85,28 +88,4 @@ func withDefaultColor(c Card) Card {
 		}
 	}
 	return c
-}
-
-// Default header background colors
-var (
-	actionRed = parseRGB("600")
-	thingBlue = parseRGB("006")
-	otherGray = parseRGB("666")
-)
-
-// parseRGB parses a hex string and returns the corresponding color.
-// The string must be length 3 or 6 and contain only hexadecimal characters.
-// Otherwise, parseRGB returns nil.
-func parseRGB(s string) *color.RGBA {
-	if len(s) == 3 {
-		s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2]})
-	}
-	if len(s) != 6 {
-		return nil
-	}
-	rgb, err := hex.DecodeString(s)
-	if err != nil {
-		return nil
-	}
-	return &color.RGBA{rgb[0], rgb[1], rgb[2], 255}
 }

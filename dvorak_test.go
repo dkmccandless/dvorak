@@ -1,7 +1,6 @@
 package dvorak
 
 import (
-	"image/color"
 	"reflect"
 	"testing"
 )
@@ -162,16 +161,8 @@ func TestParsePage(t *testing.T) {
 					{page: "Cards 101-200"},
 				},
 				cards: []Card{
-					{
-						Title:   "A",
-						Type:    "Action",
-						BGColor: &color.RGBA{153, 0, 0, 255},
-					},
-					{
-						Title:   "B",
-						Type:    "Thing",
-						BGColor: &color.RGBA{0, 153, 0, 255},
-					},
+					{Title: "A", Type: "Action", BGColor: "900"},
+					{Title: "B", Type: "Thing", BGColor: "090"},
 				},
 			},
 		},
