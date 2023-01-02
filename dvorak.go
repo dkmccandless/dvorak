@@ -17,6 +17,9 @@ type page struct {
 
 	// cards lists the page's cards.
 	cards []Card
+
+	// rawLinks indicates whether to preserve links as raw wikitext.
+	rawLinks bool
 }
 
 // Get returns the source code of a Dvorak deck,
@@ -66,12 +69,17 @@ func readPage(url string) ([]byte, error) {
 }
 
 // Parse returns the Cards in b.
-func Parse(b []byte) []Card {
-	return parsePage(b).cards
+func Parse(b []byte, opt ...Option) []Card {
+	return parsePage(b, opt...).cards
 }
 
 // parsePage parses a page of wiki source code.
-func parsePage(b []byte) page {
+func parsePage(b []byte, opt ...Option) *page {
+	p := &page{}
+	for _, o := range opt {
+		o.apply(p)
+	}
+
 	s := string(b)
 
 	// Elide wiki hidden text
@@ -87,14 +95,13 @@ func parsePage(b []byte) page {
 		s = s[:op] + s[op+cl+3:]
 	}
 
-	p := page{}
 	for _, s := range strings.SplitAfter(s, "}}") {
 		op := strings.LastIndex(s, "{{")
 		if op == -1 {
 			continue
 		}
 
-		name, params, err := parseTemplate(s[op:])
+		name, params, err := parseTemplate(s[op:], p.rawLinks)
 		if err != nil {
 			continue
 		}
@@ -116,7 +123,7 @@ func parsePage(b []byte) page {
 // Whitespace is trimmed from all returned strings.
 // If s is not a single well-formed template or has any nested subtemplates,
 // parseTemplate returns an error instead.
-func parseTemplate(s string) (name string, params map[string]string, err error) {
+func parseTemplate(s string, rawLinks bool) (name string, params map[string]string, err error) {
 	// https://meta.wikimedia.org/wiki/Help:Template
 
 	var errInvalid = fmt.Errorf("invalid template syntax")
@@ -133,10 +140,10 @@ func parseTemplate(s string) (name string, params map[string]string, err error) 
 
 	var fields []string
 
-	// Fast path for template values with no internal links
-	if !strings.Contains(s, "[[") || !strings.Contains(s, "]]") {
+	switch {
+	case !strings.Contains(s, "[[") || !strings.Contains(s, "]]"):
 		fields = strings.Split(s, "|")
-	} else {
+	case rawLinks:
 		for {
 			next := nextDelimiter(s)
 			if next == -1 {
@@ -146,6 +153,39 @@ func parseTemplate(s string) (name string, params map[string]string, err error) 
 			s = s[next+1:]
 		}
 		fields = append(fields, s)
+	default:
+		for {
+			op := strings.Index(s, "[[")
+			if op == -1 {
+				break
+			}
+			cl := strings.Index(s[op:], "]]")
+			if cl == -1 {
+				break
+			}
+			switch {
+			case strings.HasPrefix(s[op+2:], "File:"), strings.HasPrefix(s[op+2:], "file:"):
+				name := parseLinkText(s[op : op+cl+2])
+				s = s[:op] + s[op+cl+2:]
+				if name != "" {
+					s += "|image=" + name
+				}
+			case strings.HasPrefix(s[op+2:], "User:"), strings.HasPrefix(s[op+2:], "user:"):
+				// If this is the first field in a wiki user signature,
+				// consume and ignore the rest.
+				post := s[op+cl+2:]
+				if strings.HasPrefix(strings.TrimSpace(post), "([[User talk:") {
+					post = post[strings.Index(post, "]]")+3:]
+					if stampEnd := strings.Index(post, " (UTC)"); stampEnd != -1 {
+						post = post[stampEnd+6:]
+					}
+				}
+				s = s[:op] + parseLinkText(s[op:op+cl+2]) + post
+			default:
+				s = s[:op] + parseLinkText(s[op:op+cl+2]) + s[op+cl+2:]
+			}
+		}
+		fields = strings.Split(s, "|")
 	}
 
 	name = strings.TrimSpace(fields[0])
@@ -194,4 +234,33 @@ func nextDelimiter(s string) int {
 		return -1
 	}
 	return endbr + next
+}
+
+// parseLinkText returns the displayed text of an internal link, or the
+// filename if the link is to an image.
+func parseLinkText(s string) string {
+	s = strings.TrimPrefix(s, "[[")
+	s = strings.TrimSuffix(s, "]]")
+	if strings.HasPrefix(s, "File:") || strings.HasPrefix(s, "file:") {
+		name := strings.TrimSpace(strings.Split(s[5:], "|")[0])
+		if len(name) < 5 {
+			return ""
+		}
+		switch ext := strings.ToLower(name[len(name)-4:]); ext {
+		case ".jpg", ".png":
+			return name
+		default:
+			return ""
+		}
+	}
+	fields := strings.Split(s, "|")
+	return strings.TrimSpace(fields[len(fields)-1])
+}
+
+// An Option modifies parsing.
+type Option struct{ apply func(*page) }
+
+// RawLinks outputs internal wiki link markup as unparsed raw text.
+func RawLinks() Option {
+	return Option{func(p *page) { p.rawLinks = true }}
 }

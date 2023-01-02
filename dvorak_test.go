@@ -49,29 +49,32 @@ func TestParseParameter(t *testing.T) {
 
 func TestParseTemplate(t *testing.T) {
 	for _, test := range []struct {
-		s      string
-		name   string
-		params map[string]string
-		isErr  bool
+		s        string
+		rawLinks bool
+		name     string
+		params   map[string]string
+		isErr    bool
 	}{
-		{"{{card|title=ABC", "", nil, true},
-		{"card|title=ABC}}", "", nil, true},
-		{"{{card|title=ABC}}{{card|title=DEF}}", "", nil, true},
-		{"{{}}", "", map[string]string{}, false},
-		{"{{card}}", "card", map[string]string{}, false},
-		{"{{Card}}", "Card", map[string]string{}, false},
-		{"{{template:card}}", "card", map[string]string{}, false},
-		{"{{template:Card}}", "Card", map[string]string{}, false},
-		{"{{Template:card}}", "card", map[string]string{}, false},
-		{"{{Template:Card}}", "Card", map[string]string{}, false},
+		{"{{card|title=ABC", false, "", nil, true},
+		{"card|title=ABC}}", false, "", nil, true},
+		{"{{card|title=ABC}}{{card|title=DEF}}", false, "", nil, true},
+		{"{{}}", false, "", map[string]string{}, false},
+		{"{{card}}", false, "card", map[string]string{}, false},
+		{"{{Card}}", false, "Card", map[string]string{}, false},
+		{"{{template:card}}", false, "card", map[string]string{}, false},
+		{"{{template:Card}}", false, "Card", map[string]string{}, false},
+		{"{{Template:card}}", false, "card", map[string]string{}, false},
+		{"{{Template:Card}}", false, "Card", map[string]string{}, false},
 		{
 			"{{card|title=ABC|text=DEF}}",
+			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
 		},
 		{
 			"{{ card | title = ABC | text = DEF }}",
+			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
@@ -81,26 +84,56 @@ func TestParseTemplate(t *testing.T) {
 			|title=ABC
 			|text=DEF
 			}}`,
+			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
 		},
 		{
 			"{{card|creator=[[User:ABC|ABC]]|title=DEF}}",
+			false,
+			"card",
+			map[string]string{"creator": "ABC", "title": "DEF"},
+			false,
+		},
+		{
+			"{{card|creator=[[User:ABC|ABC]]|title=DEF}}",
+			true,
 			"card",
 			map[string]string{"creator": "[[User:ABC|ABC]]", "title": "DEF"},
 			false,
 		},
+		{
+			"{{card|text=[[File: ABC.jpg]]DEF}}",
+			false,
+			"card",
+			map[string]string{"text": "DEF", "image": "ABC.jpg"},
+			false,
+		},
+		{
+			"{{card|creator=[[User:ABC|ABC]] ([[User talk:ABC|talk]])|title=DEF}}",
+			false,
+			"card",
+			map[string]string{"creator": "ABC", "title": "DEF"},
+			false,
+		},
+		{
+			"{{card|creator=[[User:ABC|ABC]] ([[User talk:ABC|talk]]) 21:33, 25 July 2012 (UTC)|title=DEF}}",
+			false,
+			"card",
+			map[string]string{"creator": "ABC", "title": "DEF"},
+			false,
+		},
 	} {
-		name, params, err := parseTemplate(test.s)
+		name, params, err := parseTemplate(test.s, test.rawLinks)
 		if isErr := err != nil; isErr != test.isErr {
 			t.Errorf("parseTemplate(%q): error=%v, want %v",
 				test.s, isErr, test.isErr,
 			)
 		}
 		if name != test.name || !reflect.DeepEqual(params, test.params) {
-			t.Errorf("parseTemplate(%q): got %v, %v, want %v, %v",
-				test.s, name, params, test.name, test.params,
+			t.Errorf("parseTemplate(%q, %v): got %v, %v, want %v, %v",
+				test.s, test.rawLinks, name, params, test.name, test.params,
 			)
 		}
 	}
@@ -109,20 +142,20 @@ func TestParseTemplate(t *testing.T) {
 func TestParsePage(t *testing.T) {
 	for _, test := range []struct {
 		s string
-		p page
+		p *page
 	}{
-		{"", page{}},
-		{"{{Subpage}}", page{}},
-		{"{{card", page{}},
-		{"{{card}}", page{cards: []Card{{BGColor: otherGray}}}},
+		{"", &page{}},
+		{"{{Subpage}}", &page{}},
+		{"{{card", &page{}},
+		{"{{card}}", &page{cards: []Card{{BGColor: otherGray}}}},
 		{
 			"{{Subpage|page=Cards 1-100}}",
-			page{subpages: []subpage{{page: "Cards 1-100"}}},
+			&page{subpages: []subpage{{page: "Cards 1-100"}}},
 		},
 		{
 			`{{card|title=A|text={{card|title=B|type=Thing}}card|type=Action}}
 			{{card|title=C}}`,
-			page{
+			&page{
 				cards: []Card{
 					{Title: "B", Type: "Thing", BGColor: thingBlue},
 					{Title: "C", BGColor: otherGray},
@@ -137,7 +170,7 @@ func TestParsePage(t *testing.T) {
 				{{card|title=D
 				{{card|title=E}}
 			`,
-			page{
+			&page{
 				cards: []Card{
 					{Title: "A", Type: "Action", BGColor: actionRed},
 					{Title: "C", Type: "Letter", BGColor: otherGray},
@@ -155,7 +188,7 @@ func TestParsePage(t *testing.T) {
 				<!-- {{card|title=|type=Thing|text=|creator=|bgcolor=006}} -->
 				{{card|title=B|type=Thing|bgcolor=090}}
 			`,
-			page{
+			&page{
 				subpages: []subpage{
 					{page: "Cards 1-100"},
 					{page: "Cards 101-200"},
@@ -173,6 +206,25 @@ func TestParsePage(t *testing.T) {
 			t.Errorf("parsePage(%v): got %v; want %v",
 				b, p, test.p,
 			)
+		}
+	}
+}
+
+func TestParseLinkText(t *testing.T) {
+	for _, tt := range []struct {
+		s, want string
+	}{
+		{"[[abc]]", "abc"},
+		{"[[abc def]]", "abc def"},
+		{"[[abc|def]]", "def"},
+		{"[[User:abc|abc]]", "abc"},
+		{"[[User talk:abc|talk]]", "talk"},
+		{"[[file: abc.jpg]]", "abc.jpg"},
+		{"[[file: abc.jpg|center|frameless]]", "abc.jpg"},
+		{"[[file:abc.exe|harmless]]", ""},
+	} {
+		if got := parseLinkText(tt.s); got != tt.want {
+			t.Errorf("parseLinkText(%v): got %v, want %v", tt.s, got, tt.want)
 		}
 	}
 }
