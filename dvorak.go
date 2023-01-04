@@ -18,8 +18,8 @@ type page struct {
 	// cards lists the page's cards.
 	cards []Card
 
-	// rawLinks indicates whether to preserve links as raw wikitext.
-	rawLinks bool
+	// rawText indicates whether to preserve wiki markup as raw text.
+	rawText bool
 }
 
 // Get returns the source code of a Dvorak deck,
@@ -101,7 +101,7 @@ func parsePage(b []byte, opt ...Option) *page {
 			continue
 		}
 
-		name, params, err := parseTemplate(s[op:], p.rawLinks)
+		name, params, err := parseTemplate(s[op:], p.rawText)
 		if err != nil {
 			continue
 		}
@@ -123,7 +123,7 @@ func parsePage(b []byte, opt ...Option) *page {
 // Whitespace is trimmed from all returned strings.
 // If s is not a single well-formed template or has any nested subtemplates,
 // parseTemplate returns an error instead.
-func parseTemplate(s string, rawLinks bool) (name string, params map[string]string, err error) {
+func parseTemplate(s string, rawText bool) (name string, params map[string]string, err error) {
 	// https://meta.wikimedia.org/wiki/Help:Template
 
 	var errInvalid = fmt.Errorf("invalid template syntax")
@@ -143,7 +143,7 @@ func parseTemplate(s string, rawLinks bool) (name string, params map[string]stri
 	switch {
 	case !strings.Contains(s, "[[") || !strings.Contains(s, "]]"):
 		fields = strings.Split(s, "|")
-	case rawLinks:
+	case rawText:
 		for {
 			next := nextDelimiter(s)
 			if next == -1 {
@@ -197,6 +197,12 @@ func parseTemplate(s string, rawLinks bool) (name string, params map[string]stri
 	params = make(map[string]string)
 	for _, f := range fields[1:] {
 		key, value := parseParameter(f)
+		if !rawText {
+			// Parse bold/italic markup as HTML
+			value = replacePair(value, "'''''", "<b><i>", "</i></b>")
+			value = replacePair(value, "'''", "<b>", "</b>")
+			value = replacePair(value, "''", "<i>", "</i>")
+		}
 		params[key] = value
 	}
 	return
@@ -257,10 +263,21 @@ func parseLinkText(s string) string {
 	return strings.TrimSpace(fields[len(fields)-1])
 }
 
+// replacePair replaces occurrences of old alternatively with new1 and new2.
+func replacePair(s, old, new1, new2 string) string {
+	for strings.Contains(s, old) {
+		s = strings.Replace(s, old, new1, 1)
+		s = strings.Replace(s, old, new2, 1)
+	}
+	return s
+}
+
 // An Option modifies parsing.
 type Option struct{ apply func(*page) }
 
-// RawLinks outputs internal wiki link markup as unparsed raw text.
-func RawLinks() Option {
-	return Option{func(p *page) { p.rawLinks = true }}
+// RawText outputs wiki markup as unparsed raw text.
+// Without RawText, internal links are outputted as their displayed text, and
+// bold/italic markup as HTML.
+func RawText() Option {
+	return Option{func(p *page) { p.rawText = true }}
 }

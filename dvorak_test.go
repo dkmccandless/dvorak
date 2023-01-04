@@ -124,6 +124,13 @@ func TestParseTemplate(t *testing.T) {
 			map[string]string{"creator": "ABC", "title": "DEF"},
 			false,
 		},
+		{
+			"{{card|title=''ABC''|text='''DEF'''. '''''GHI!'''''}}",
+			false,
+			"card",
+			map[string]string{"title": "<i>ABC</i>", "text": "<b>DEF</b>. <b><i>GHI!</i></b>"},
+			false,
+		},
 	} {
 		name, params, err := parseTemplate(test.s, test.rawLinks)
 		if isErr := err != nil; isErr != test.isErr {
@@ -225,6 +232,28 @@ func TestParseLinkText(t *testing.T) {
 	} {
 		if got := parseLinkText(tt.s); got != tt.want {
 			t.Errorf("parseLinkText(%v): got %v, want %v", tt.s, got, tt.want)
+		}
+	}
+}
+
+func TestReplacePair(t *testing.T) {
+	for _, tt := range []struct {
+		s, old, new1, new2, want string
+	}{
+		{"", "a", "b", "c", ""},
+		{"onomatopoeia", "u", "a", "o", "onomatopoeia"},
+		{"onomatopoeia", "o", "a", "u", "anumatapueia"},
+		{"''abc", "''", "<i>", "</i>", "<i>abc"},
+		{
+			"'''Action:''' Draw a card. '''Action:''' Destroy target Thing.",
+			"'''", "<b>", "</b>",
+			"<b>Action:</b> Draw a card. <b>Action:</b> Destroy target Thing.",
+		},
+	} {
+		if got := replacePair(tt.s, tt.old, tt.new1, tt.new2); got != tt.want {
+			t.Errorf("replacePair(%v, %v, %v, %v): got %v, want %v",
+				tt.s, tt.old, tt.new1, tt.new2, got, tt.want,
+			)
 		}
 	}
 }
