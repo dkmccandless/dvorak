@@ -107,7 +107,9 @@ func parsePage(b []byte, opt ...Option) *page {
 		}
 		switch name {
 		case "Card", "card":
-			p.cards = append(p.cards, withDefaultColor(populateCard(params)))
+			c := withDefaultColor(populateCard(params))
+			c.ID = len(p.cards) + 1
+			p.cards = append(p.cards, c)
 		case "Subpage", "subpage":
 			sp, err := populateSubpage(params)
 			if err != nil {

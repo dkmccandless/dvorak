@@ -154,7 +154,7 @@ func TestParsePage(t *testing.T) {
 		{"", &page{}},
 		{"{{Subpage}}", &page{}},
 		{"{{card", &page{}},
-		{"{{card}}", &page{cards: []Card{{BGColor: otherGray}}}},
+		{"{{card}}", &page{cards: []Card{{BGColor: otherGray, ID: 1}}}},
 		{
 			"{{Subpage|page=Cards 1-100}}",
 			&page{subpages: []subpage{{page: "Cards 1-100"}}},
@@ -164,8 +164,8 @@ func TestParsePage(t *testing.T) {
 			{{card|title=C}}`,
 			&page{
 				cards: []Card{
-					{Title: "B", Type: "Thing", BGColor: thingBlue},
-					{Title: "C", BGColor: otherGray},
+					{Title: "B", Type: "Thing", BGColor: thingBlue, ID: 1},
+					{Title: "C", BGColor: otherGray, ID: 2},
 				},
 			},
 		},
@@ -179,9 +179,9 @@ func TestParsePage(t *testing.T) {
 			`,
 			&page{
 				cards: []Card{
-					{Title: "A", Type: "Action", BGColor: actionRed},
-					{Title: "C", Type: "Letter", BGColor: otherGray},
-					{Title: "E", BGColor: otherGray},
+					{Title: "A", Type: "Action", BGColor: actionRed, ID: 1},
+					{Title: "C", Type: "Letter", BGColor: otherGray, ID: 2},
+					{Title: "E", BGColor: otherGray, ID: 3},
 				},
 			},
 		},
@@ -201,8 +201,8 @@ func TestParsePage(t *testing.T) {
 					{page: "Cards 101-200"},
 				},
 				cards: []Card{
-					{Title: "A", Type: "Action", BGColor: "900"},
-					{Title: "B", Type: "Thing", BGColor: "090"},
+					{Title: "A", Type: "Action", BGColor: "900", ID: 1},
+					{Title: "B", Type: "Thing", BGColor: "090", ID: 2},
 				},
 			},
 		},

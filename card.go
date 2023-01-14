@@ -55,6 +55,9 @@ type Card struct {
 	// e.g. for display in example texts.
 	// If not empty, it reduces the card's size.
 	MiniCard string
+
+	// ID is the card's position within the deck.
+	ID int
 }
 
 // populateCard returns a Card populated with params.
