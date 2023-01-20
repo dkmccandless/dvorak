@@ -51,7 +51,8 @@ func ImageURLs(cards []Card) (map[string]string, error) {
 			return nil, err
 		}
 		for name, url := range urls {
-			m[name] = url
+			// The wiki's TLS certificate is for dvorakgame.co.uk
+			m[name] = strings.Replace(url, "www.", "", 1)
 		}
 		images = images[n:]
 	}
