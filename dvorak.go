@@ -255,7 +255,7 @@ func parseLinkText(s string) string {
 			return ""
 		}
 		switch ext := strings.ToLower(name[len(name)-4:]); ext {
-		case ".jpg", ".png":
+		case ".gif", ".jpg", ".png":
 			return name
 		default:
 			return ""
