@@ -257,3 +257,27 @@ func TestReplacePair(t *testing.T) {
 		}
 	}
 }
+
+func TestRemoveComments(t *testing.T) {
+	for _, tt := range []struct {
+		s, want string
+	}{
+		{"", ""},
+		{"a", "a"},
+		{"<!--", "<!--"},
+		{"-->", "-->"},
+		{"<!---->", ""},
+		{"<!--comment", "<!--comment"},
+		{"<!--comment-->", ""},
+		{"abc<!--comment-->", "abc"},
+		{"abc <!--comment--> def", "abc  def"},
+		{"abc\n<!--comment-->", "abc\n"},
+		{"abc\n<!--comment-->\n", "abc\n"},
+		{"abc\n <!--comment--> ", "abc\n  "},
+		{"abc \n   <!--comment-->   \n  def", "abc \n  def"},
+	} {
+		if got := removeComments(tt.s); got != tt.want {
+			t.Errorf("removeComments(%q): got %q, want %q", tt.s, got, tt.want)
+		}
+	}
+}
