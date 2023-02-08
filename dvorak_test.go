@@ -37,6 +37,18 @@ func TestParseParameter(t *testing.T) {
 		{"title=ABC", "title", "ABC"},
 		{"title = ABC", "title", "ABC"},
 		{" title = ABC ", "title", "ABC"},
+		{
+			"text=<b>Action:</b>Destroy target Thing.<br>Draw a card.",
+			"text", "<b>Action:</b>Destroy target Thing.<br>Draw a card.",
+		},
+		{
+			"title=<font color=FFD700>Golden Title</font>",
+			"title", "<font color=FFD700>Golden Title</font>",
+		},
+		{
+			"text=Gain control of <card title>.",
+			"text", "Gain control of &lt;card title&gt;.",
+		},
 	} {
 		name, value := parseParameter(test.s)
 		if name != test.name || value != test.value {

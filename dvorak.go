@@ -203,7 +203,7 @@ func parseTemplate(s string, rawText bool) (name string, params map[string]strin
 func parseParameter(s string) (name, value string) {
 	eq := strings.Index(s, "=")
 	return strings.TrimSpace(strings.TrimSuffix(s[:eq+1], "=")),
-		strings.TrimSpace(s[eq+1:])
+		strings.TrimSpace(escapeNonTags(s[eq+1:]))
 }
 
 // nextDelimiter returns the index of the first "|" in s
