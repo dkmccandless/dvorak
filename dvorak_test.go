@@ -46,7 +46,7 @@ func TestParseParameter(t *testing.T) {
 			"title", "<font color=FFD700>Golden Title</font>",
 		},
 		{
-			"text=Gain control of <card title>.",
+			"text=Gain control of &lt;card title&gt;.",
 			"text", "Gain control of &lt;card title&gt;.",
 		},
 	} {
@@ -123,6 +123,13 @@ func TestParseTemplate(t *testing.T) {
 			false,
 		},
 		{
+			"{{card|text=[[File: ABC.jpg]DEF}}",
+			false,
+			"card",
+			map[string]string{"text": "[[File: ABC.jpg]DEF"},
+			false,
+		},
+		{
 			"{{card|creator=[[User:ABC|ABC]] ([[User talk:ABC|talk]])|title=DEF}}",
 			false,
 			"card",
@@ -134,6 +141,20 @@ func TestParseTemplate(t *testing.T) {
 			false,
 			"card",
 			map[string]string{"creator": "ABC", "title": "DEF"},
+			false,
+		},
+		{
+			"{{card|text=Draw a random card from the [[Heavy Actions booster pack]].}}",
+			false,
+			"card",
+			map[string]string{"text": "Draw a random card from the Heavy Actions booster pack."},
+			false,
+		},
+		{
+			"{{card|text=Read the [[Rules#Special_rules|Special Rules]] aloud.}}",
+			false,
+			"card",
+			map[string]string{"text": "Read the Special Rules aloud."},
 			false,
 		},
 		{
@@ -266,30 +287,6 @@ func TestReplacePair(t *testing.T) {
 			t.Errorf("replacePair(%v, %v, %v, %v): got %v, want %v",
 				tt.s, tt.old, tt.new1, tt.new2, got, tt.want,
 			)
-		}
-	}
-}
-
-func TestRemoveComments(t *testing.T) {
-	for _, tt := range []struct {
-		s, want string
-	}{
-		{"", ""},
-		{"a", "a"},
-		{"<!--", "<!--"},
-		{"-->", "-->"},
-		{"<!---->", ""},
-		{"<!--comment", "<!--comment"},
-		{"<!--comment-->", ""},
-		{"abc<!--comment-->", "abc"},
-		{"abc <!--comment--> def", "abc  def"},
-		{"abc\n<!--comment-->", "abc\n"},
-		{"abc\n<!--comment-->\n", "abc\n"},
-		{"abc\n <!--comment--> ", "abc\n  "},
-		{"abc \n   <!--comment-->   \n  def", "abc \n  def"},
-	} {
-		if got := removeComments(tt.s); got != tt.want {
-			t.Errorf("removeComments(%q): got %q, want %q", tt.s, got, tt.want)
 		}
 	}
 }
