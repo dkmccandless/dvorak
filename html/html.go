@@ -110,9 +110,6 @@ var (
 
 	// wfURLProtocolsRegex matches valid URL protocols.
 	wfURLProtocolsRegex = regexp.MustCompile(`((?i)` + wfURLProtocols + `)`)
-
-	// xmlNSAttributePattern matches XML namespace attributes.
-	xmlNSAttributePattern = regexp.MustCompile(`^xmlns:[:A-Z_a-z-.0-9]+$`)
 )
 
 var (
@@ -186,17 +183,17 @@ func RemoveHTMLTags(s string) string {
 			continue
 		}
 
-		if brace == "/>" && !(htmlSingle[tag] || htmlSingleOnly[tag]) {
-			// Remove the self-closing slash for consistency with HTML5 semantics.
-			brace = ">"
-		}
-
 		if ok := validateTag(params, tag); !ok {
 			b.WriteString("&lt;" + strings.ReplaceAll(t, ">", "&gt;"))
 			continue
 		}
 
 		params = fixTagAttributes(params, tag)
+
+		if brace == "/>" && !(htmlSingle[tag] || htmlSingleOnly[tag]) {
+			// Remove the self-closing slash for consistency with HTML5 semantics.
+			brace = ">"
+		}
 		if brace == "/>" && !htmlSingleOnly[tag] {
 			// Interpret self-closing tags as empty tags,
 			// even when HTML5 would interpret them as start tags.
@@ -291,14 +288,6 @@ func validateTagAttributes(attribs map[string]string, element string) map[string
 func validateAttributes(attrs map[string]string, allowed map[string]bool) map[string]string {
 	out := make(map[string]string)
 	for attr, value := range attrs {
-		// Allow XML namespace declaration to allow RDFa
-		if xmlNSAttributePattern.MatchString(attr) {
-			if !evilURIPattern.MatchString(value) {
-				out[attr] = value
-			}
-			continue
-		}
-
 		// Allow any attribute beginning with "data-"
 		// except those reserved for use by MediaWiki code.
 		// Ensure that attr is not namespaced by banning colons.
