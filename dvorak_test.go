@@ -61,32 +61,29 @@ func TestParseParameter(t *testing.T) {
 
 func TestParseTemplate(t *testing.T) {
 	for _, test := range []struct {
-		s        string
-		rawLinks bool
-		name     string
-		params   map[string]string
-		isErr    bool
+		s      string
+		name   string
+		params map[string]string
+		isErr  bool
 	}{
-		{"{{card|title=ABC", false, "", nil, true},
-		{"card|title=ABC}}", false, "", nil, true},
-		{"{{card|title=ABC}}{{card|title=DEF}}", false, "", nil, true},
-		{"{{}}", false, "", map[string]string{}, false},
-		{"{{card}}", false, "card", map[string]string{}, false},
-		{"{{Card}}", false, "Card", map[string]string{}, false},
-		{"{{template:card}}", false, "card", map[string]string{}, false},
-		{"{{template:Card}}", false, "Card", map[string]string{}, false},
-		{"{{Template:card}}", false, "card", map[string]string{}, false},
-		{"{{Template:Card}}", false, "Card", map[string]string{}, false},
+		{"{{card|title=ABC", "", nil, true},
+		{"card|title=ABC}}", "", nil, true},
+		{"{{card|title=ABC}}{{card|title=DEF}}", "", nil, true},
+		{"{{}}", "", map[string]string{}, false},
+		{"{{card}}", "card", map[string]string{}, false},
+		{"{{Card}}", "Card", map[string]string{}, false},
+		{"{{template:card}}", "card", map[string]string{}, false},
+		{"{{template:Card}}", "Card", map[string]string{}, false},
+		{"{{Template:card}}", "card", map[string]string{}, false},
+		{"{{Template:Card}}", "Card", map[string]string{}, false},
 		{
 			"{{card|title=ABC|text=DEF}}",
-			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
 		},
 		{
 			"{{ card | title = ABC | text = DEF }}",
-			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
@@ -96,63 +93,50 @@ func TestParseTemplate(t *testing.T) {
 			|title=ABC
 			|text=DEF
 			}}`,
-			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
 		},
 		{
 			"{{card|creator=[[User:ABC|ABC]]|title=DEF}}",
-			false,
 			"card",
 			map[string]string{"creator": "ABC", "title": "DEF"},
 			false,
 		},
 		{
-			"{{card|creator=[[User:ABC|ABC]]|title=DEF}}",
-			true,
-			"card",
-			map[string]string{"creator": "[[User:ABC|ABC]]", "title": "DEF"},
-			false,
-		},
-		{
 			"{{card|text=[[File: ABC.jpg]]DEF}}",
-			false,
 			"card",
 			map[string]string{"text": "DEF", "image": "ABC.jpg"},
 			false,
 		},
 		{
 			"{{card|creator=[[User:ABC|ABC]] ([[User talk:ABC|talk]])|title=DEF}}",
-			false,
 			"card",
 			map[string]string{"creator": "ABC", "title": "DEF"},
 			false,
 		},
 		{
 			"{{card|creator=[[User:ABC|ABC]] ([[User talk:ABC|talk]]) 21:33, 25 July 2012 (UTC)|title=DEF}}",
-			false,
 			"card",
 			map[string]string{"creator": "ABC", "title": "DEF"},
 			false,
 		},
 		{
 			"{{card|title=''ABC''|text='''DEF'''. '''''GHI!'''''}}",
-			false,
 			"card",
 			map[string]string{"title": "<i>ABC</i>", "text": "<b>DEF</b>. <b><i>GHI!</i></b>"},
 			false,
 		},
 	} {
-		name, params, err := parseTemplate(test.s, test.rawLinks)
+		name, params, err := parseTemplate(test.s)
 		if isErr := err != nil; isErr != test.isErr {
 			t.Errorf("parseTemplate(%q): error=%v, want %v",
 				test.s, isErr, test.isErr,
 			)
 		}
 		if name != test.name || !reflect.DeepEqual(params, test.params) {
-			t.Errorf("parseTemplate(%q, %v): got %v, %v, want %v, %v",
-				test.s, test.rawLinks, name, params, test.name, test.params,
+			t.Errorf("parseTemplate(%q): got %v, %v, want %v, %v",
+				test.s, name, params, test.name, test.params,
 			)
 		}
 	}

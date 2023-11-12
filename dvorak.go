@@ -17,9 +17,6 @@ type page struct {
 
 	// cards lists the page's cards.
 	cards []Card
-
-	// rawText indicates whether to preserve wiki markup as raw text.
-	rawText bool
 }
 
 // Get returns the source code of a Dvorak deck,
@@ -69,16 +66,13 @@ func readPage(url string) ([]byte, error) {
 }
 
 // Parse returns the Cards in b.
-func Parse(b []byte, opt ...Option) []Card {
-	return parsePage(b, opt...).cards
+func Parse(b []byte) []Card {
+	return parsePage(b).cards
 }
 
 // parsePage parses a page of wiki source code.
-func parsePage(b []byte, opt ...Option) *page {
+func parsePage(b []byte) *page {
 	p := &page{}
-	for _, o := range opt {
-		o.apply(p)
-	}
 
 	s := removeComments(string(b))
 
@@ -88,7 +82,7 @@ func parsePage(b []byte, opt ...Option) *page {
 			continue
 		}
 
-		name, params, err := parseTemplate(s[op:], p.rawText)
+		name, params, err := parseTemplate(s[op:])
 		if err != nil {
 			continue
 		}
@@ -112,7 +106,7 @@ func parsePage(b []byte, opt ...Option) *page {
 // Whitespace is trimmed from all returned strings.
 // If s is not a single well-formed template or has any nested subtemplates,
 // parseTemplate returns an error instead.
-func parseTemplate(s string, rawText bool) (name string, params map[string]string, err error) {
+func parseTemplate(s string) (name string, params map[string]string, err error) {
 	// https://meta.wikimedia.org/wiki/Help:Template
 
 	var errInvalid = fmt.Errorf("invalid template syntax")
@@ -132,16 +126,6 @@ func parseTemplate(s string, rawText bool) (name string, params map[string]strin
 	switch {
 	case !strings.Contains(s, "[[") || !strings.Contains(s, "]]"):
 		fields = strings.Split(s, "|")
-	case rawText:
-		for {
-			next := nextDelimiter(s)
-			if next == -1 {
-				break
-			}
-			fields = append(fields, s[:next])
-			s = s[next+1:]
-		}
-		fields = append(fields, s)
 	default:
 		for {
 			op := strings.Index(s, "[[")
@@ -186,12 +170,12 @@ func parseTemplate(s string, rawText bool) (name string, params map[string]strin
 	params = make(map[string]string)
 	for _, f := range fields[1:] {
 		key, value := parseParameter(f)
-		if !rawText {
-			// Parse bold/italic markup as HTML
-			value = replacePair(value, "'''''", "<b><i>", "</i></b>")
-			value = replacePair(value, "'''", "<b>", "</b>")
-			value = replacePair(value, "''", "<i>", "</i>")
-		}
+
+		// Parse bold/italic markup as HTML
+		value = replacePair(value, "'''''", "<b><i>", "</i></b>")
+		value = replacePair(value, "'''", "<b>", "</b>")
+		value = replacePair(value, "''", "<i>", "</i>")
+
 		params[key] = value
 	}
 	return
@@ -292,14 +276,4 @@ func removeComments(s string) string {
 		}
 	}
 	return s
-}
-
-// An Option modifies parsing.
-type Option struct{ apply func(*page) }
-
-// RawText outputs wiki markup as unparsed raw text.
-// Without RawText, internal links are outputted as their displayed text, and
-// bold/italic markup as HTML.
-func RawText() Option {
-	return Option{func(p *page) { p.rawText = true }}
 }
