@@ -187,31 +187,6 @@ func parseParameter(s string) (name, value string) {
 	return strings.TrimSpace(before), strings.TrimSpace(after)
 }
 
-// nextDelimiter returns the index of the first "|" in s
-// that is not enclosed within matching double brackets,
-// or -1 if no unenclosed "|" is present in s.
-func nextDelimiter(s string) int {
-	lbr := strings.Index(s, "[[")
-	pipe := strings.Index(s, "|")
-
-	if lbr == -1 || pipe != -1 && pipe < lbr {
-		return pipe
-	}
-
-	// Left double bracket occurs first; find the next right double bracket.
-	rbroffset := strings.Index(s[lbr:], "]]")
-	if rbroffset == -1 {
-		return pipe
-	}
-
-	endbr := lbr + rbroffset + 2
-	next := nextDelimiter(s[endbr:])
-	if next == -1 {
-		return -1
-	}
-	return endbr + next
-}
-
 // parseLinkText returns the displayed text of an internal link, or the
 // filename if the link is to an image.
 func parseLinkText(s string) string {

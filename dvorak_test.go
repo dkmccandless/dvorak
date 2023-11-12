@@ -7,30 +7,6 @@ import (
 	"kr.dev/diff"
 )
 
-func TestNextDelimiter(t *testing.T) {
-	for _, test := range []struct {
-		s string
-		i int
-	}{
-		{"", -1},
-		{"[[", -1},
-		{"]]", -1},
-		{"}}", -1},
-		{"|", 0},
-		{" |", 1},
-		{"Action|longtext=true}}", 6},
-		{"Action|creator=[[User:ABC|ABC]]", 6},
-		{"[[User:ABC|ABC", 10},
-		{"[[User:ABC|ABC]]", -1},
-		{"[[User:ABC|ABC]]|longtext=true", 16},
-		{"[[User:ABC|ABC]], [[User:DEF|DEF]], and others", -1},
-	} {
-		if i := nextDelimiter(test.s); i != test.i {
-			t.Errorf("nextDelimiter(%q): got %v, want %v", test.s, i, test.i)
-		}
-	}
-}
-
 func TestParseParameter(t *testing.T) {
 	for _, test := range []struct{ s, name, value string }{
 		{"", "", ""},
