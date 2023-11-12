@@ -63,19 +63,32 @@ type Card struct {
 // populateCard returns a Card populated with params.
 func populateCard(params map[string]string) Card {
 	return Card{
-		Title:       params["title"],
+		Title:       parseWikitext(params["title"]),
 		LongTitle:   params["longtitle"],
-		Text:        params["text"],
+		Text:        parseWikitext(params["text"]),
 		LongText:    params["longtext"],
-		Type:        params["type"],
+		Type:        parseWikitext(params["type"]),
 		BGColor:     params["bgcolor"],
-		CornerValue: params["cornervalue"],
+		CornerValue: parseWikitext(params["cornervalue"]),
 		Image:       params["image"],
 		ImgBack:     params["imgback"],
-		FlavorText:  params["flavortext"],
-		Creator:     params["creator"],
+		FlavorText:  parseWikitext(params["flavortext"]),
+		Creator:     parseWikitext(params["creator"]),
 		MiniCard:    params["minicard"],
 	}
+}
+
+// parseWikitext escapes invalid tags and parses bold and italic markup as HTML.
+func parseWikitext(s string) string {
+	s = escapeNonTags(s)
+
+	s = replacePair(s, "'''''", "<b><i>", "</i></b>")
+	s = replacePair(s, "'''", "<b>", "</b>")
+	s = replacePair(s, "''", "<i>", "</i>")
+
+	// TODO: convert to HTML, return []*html.Node
+
+	return s
 }
 
 // withDefaultColor adds a default background color to c if it has none.

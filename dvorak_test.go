@@ -45,10 +45,6 @@ func TestParseParameter(t *testing.T) {
 			"title=<font color=FFD700>Golden Title</font>",
 			"title", "<font color=FFD700>Golden Title</font>",
 		},
-		{
-			"text=Gain control of <card title>.",
-			"text", "Gain control of &lt;card title&gt;.",
-		},
 	} {
 		name, value := parseParameter(test.s)
 		if name != test.name || value != test.value {
@@ -119,12 +115,6 @@ func TestParseTemplate(t *testing.T) {
 			"{{card|creator=[[User:ABC|ABC]] ([[User talk:ABC|talk]]) 21:33, 25 July 2012 (UTC)|title=DEF}}",
 			"card",
 			map[string]string{"creator": "ABC", "title": "DEF"},
-			false,
-		},
-		{
-			"{{card|title=''ABC''|text='''DEF'''. '''''GHI!'''''}}",
-			"card",
-			map[string]string{"title": "<i>ABC</i>", "text": "<b>DEF</b>. <b><i>GHI!</i></b>"},
 			false,
 		},
 	} {

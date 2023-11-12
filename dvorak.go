@@ -170,12 +170,6 @@ func parseTemplate(s string) (name string, params map[string]string, err error) 
 	params = make(map[string]string)
 	for _, f := range fields[1:] {
 		key, value := parseParameter(f)
-
-		// Parse bold/italic markup as HTML
-		value = replacePair(value, "'''''", "<b><i>", "</i></b>")
-		value = replacePair(value, "'''", "<b>", "</b>")
-		value = replacePair(value, "''", "<i>", "</i>")
-
 		params[key] = value
 	}
 	return
@@ -187,7 +181,7 @@ func parseTemplate(s string) (name string, params map[string]string, err error) 
 func parseParameter(s string) (name, value string) {
 	eq := strings.Index(s, "=")
 	return strings.TrimSpace(strings.TrimSuffix(s[:eq+1], "=")),
-		strings.TrimSpace(escapeNonTags(s[eq+1:]))
+		strings.TrimSpace(s[eq+1:])
 }
 
 // nextDelimiter returns the index of the first "|" in s

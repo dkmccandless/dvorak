@@ -5,6 +5,21 @@ import (
 	"testing"
 )
 
+func TestParseWikitext(t *testing.T) {
+	for _, tt := range []struct{ value, want string }{
+		{
+			"''Italics'' '''Bold''' '''''Both'''''",
+			"<i>Italics</i> <b>Bold</b> <b><i>Both</i></b>",
+		},
+	} {
+		if got := parseWikitext(tt.value); got != tt.want {
+			t.Errorf("parseWikitext(%q): got %v, want %v",
+				tt.value, got, tt.want,
+			)
+		}
+	}
+}
+
 func TestPopulateCard(t *testing.T) {
 	for _, test := range []struct {
 		params map[string]string
