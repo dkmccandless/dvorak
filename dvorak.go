@@ -88,7 +88,8 @@ func parsePage(b []byte) *page {
 		}
 		switch name {
 		case "Card", "card":
-			c := withDefaultColor(populateCard(params))
+			c := populateCard(params)
+			c.BGColor = withDefaultColor(params["type"], c.BGColor)
 			c.ID = len(p.cards) + 1
 			p.cards = append(p.cards, c)
 		case "Subpage", "subpage":
@@ -179,9 +180,11 @@ func parseTemplate(s string) (name string, params map[string]string, err error) 
 // Whitespace is trimmed from the returned strings.
 // If s does not contain "=", name is the empty string.
 func parseParameter(s string) (name, value string) {
-	eq := strings.Index(s, "=")
-	return strings.TrimSpace(strings.TrimSuffix(s[:eq+1], "=")),
-		strings.TrimSpace(s[eq+1:])
+	before, after, found := strings.Cut(s, "=")
+	if !found {
+		return "", strings.TrimSpace(before)
+	}
+	return strings.TrimSpace(before), strings.TrimSpace(after)
 }
 
 // nextDelimiter returns the index of the first "|" in s

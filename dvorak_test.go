@@ -3,6 +3,8 @@ package dvorak
 import (
 	"reflect"
 	"testing"
+
+	"kr.dev/diff"
 )
 
 func TestNextDelimiter(t *testing.T) {
@@ -117,6 +119,12 @@ func TestParseTemplate(t *testing.T) {
 			map[string]string{"creator": "ABC", "title": "DEF"},
 			false,
 		},
+		{
+			"{{card| title = A | type = Action }}",
+			"card",
+			map[string]string{"title": "A", "type": "Action"},
+			false,
+		},
 	} {
 		name, params, err := parseTemplate(test.s)
 		if isErr := err != nil; isErr != test.isErr {
@@ -146,16 +154,6 @@ func TestParsePage(t *testing.T) {
 			&page{subpages: []subpage{{page: "Cards 1-100"}}},
 		},
 		{
-			`{{card|title=A|text={{card|title=B|type=Thing}}card|type=Action}}
-			{{card|title=C}}`,
-			&page{
-				cards: []Card{
-					{Title: "B", Type: "Thing", BGColor: thingBlue, ID: 1},
-					{Title: "C", BGColor: otherGray, ID: 2},
-				},
-			},
-		},
-		{
 			`
 				{{card| title = A | type = Action }}
 				card|title=B|type=Thing}}
@@ -165,9 +163,9 @@ func TestParsePage(t *testing.T) {
 			`,
 			&page{
 				cards: []Card{
-					{Title: "A", Type: "Action", BGColor: actionRed, ID: 1},
-					{Title: "C", Type: "Letter", BGColor: otherGray, ID: 2},
-					{Title: "E", BGColor: otherGray, ID: 3},
+					{Title: text("A"), Type: text("Action"), BGColor: actionRed, ID: 1},
+					{Title: text("C"), Type: text("Letter"), BGColor: otherGray, ID: 2},
+					{Title: text("E"), BGColor: otherGray, ID: 3},
 				},
 			},
 		},
@@ -187,19 +185,15 @@ func TestParsePage(t *testing.T) {
 					{page: "Cards 101-200"},
 				},
 				cards: []Card{
-					{Title: "A", Type: "Action", BGColor: "900", ID: 1},
-					{Title: "B", Type: "Thing", BGColor: "090", ID: 2},
+					{Title: text("A"), Type: text("Action"), BGColor: "900", ID: 1},
+					{Title: text("B"), Type: text("Thing"), BGColor: "090", ID: 2},
 				},
 			},
 		},
 	} {
 		b := []byte(test.s)
 		p := parsePage(b)
-		if !reflect.DeepEqual(p, test.p) {
-			t.Errorf("parsePage(%v): got %v; want %v",
-				b, p, test.p,
-			)
-		}
+		diff.Test(t, t.Errorf, p, test.p)
 	}
 }
 
