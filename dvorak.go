@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/dkmccandless/dvorak/sanitize"
 )
 
 // page contains the template information of a Dvorak wiki page.
@@ -74,7 +76,7 @@ func Parse(b []byte) []Card {
 func parsePage(b []byte) *page {
 	p := &page{}
 
-	s := removeComments(string(b))
+	s := sanitize.RemoveHTMLComments(string(b))
 
 	for _, s := range strings.SplitAfter(s, "}}") {
 		op := strings.LastIndex(s, "{{")
@@ -213,39 +215,6 @@ func replacePair(s, old, new1, new2 string) string {
 	for strings.Contains(s, old) {
 		s = strings.Replace(s, old, new1, 1)
 		s = strings.Replace(s, old, new2, 1)
-	}
-	return s
-}
-
-// removeComments removes HTML comments.
-// If a comment is preceded and followed by a newline (ignoring spaces),
-// removeComments removes the spaces and one of the newlines as well.
-// https://github.com/wikimedia/mediawiki/blob/80d72fc07d509916224555c9a062892fc3690864/includes/parser/Sanitizer.php#L441
-func removeComments(s string) string {
-	for {
-		op := strings.Index(s, "<!--")
-		if op == -1 {
-			break
-		}
-		cl := strings.Index(s[op:], "-->")
-		if cl == -1 {
-			break
-		}
-		cl = op + cl + 3
-		lead := op
-		for lead > 0 && s[lead-1] == ' ' {
-			lead--
-		}
-		trail := cl
-		for trail < len(s) && s[trail] == ' ' {
-			trail++
-		}
-		if lead > 0 && s[lead-1] == '\n' &&
-			trail < len(s) && s[trail] == '\n' {
-			s = s[:lead-1] + "\n" + s[trail+1:]
-		} else {
-			s = s[:op] + s[cl:]
-		}
 	}
 	return s
 }

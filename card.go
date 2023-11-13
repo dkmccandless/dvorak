@@ -3,6 +3,7 @@ package dvorak
 import (
 	"strings"
 
+	"github.com/dkmccandless/dvorak/sanitize"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -84,7 +85,7 @@ func populateCard(params map[string]string) Card {
 
 // parseWikitext parses wikitext and wiki markup as HTML.
 func parseWikitext(s string) []*html.Node {
-	s = escapeNonTags(s)
+	s = sanitize.RemoveHTMLTags(s)
 
 	s = replacePair(s, "'''''", "<b><i>", "</i></b>")
 	s = replacePair(s, "'''", "<b>", "</b>")
