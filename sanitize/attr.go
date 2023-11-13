@@ -1,4 +1,4 @@
-package html
+package sanitize
 
 // attributesAllowed maps HTML elements to their allowed attributes.
 var attributesAllowed = func() map[string]map[string]bool {

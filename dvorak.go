@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/dkmccandless/dvorak/html"
+	"github.com/dkmccandless/dvorak/sanitize"
 )
 
 // page contains the template information of a Dvorak wiki page.
@@ -82,7 +82,7 @@ func parsePage(b []byte, opt ...Option) *page {
 		o.apply(p)
 	}
 
-	s := html.RemoveHTMLTags(string(b))
+	s := sanitize.RemoveHTMLTags(string(b))
 
 	for _, s := range strings.SplitAfter(s, "}}") {
 		op := strings.LastIndex(s, "{{")

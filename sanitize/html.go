@@ -1,5 +1,5 @@
-// Package html implements the MediaWiki sanitizer's removeHTMLtags function.
-package html
+// Package sanitize implements the MediaWiki sanitizer's removeHTMLtags function.
+package sanitize
 
 import (
 	"fmt"
