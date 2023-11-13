@@ -1,5 +1,13 @@
 package dvorak
 
+import (
+	"strings"
+
+	"github.com/dkmccandless/dvorak/sanitize"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
+)
+
 // Default header background colors
 const (
 	actionRed = "600"
@@ -12,21 +20,19 @@ type Card struct {
 	// http://dvorakgame.co.uk/index.php/Template:Card
 
 	// Title is the card's title.
-	Title string
+	Title []*html.Node
 
 	// LongTitle indicates that Title is too long to fit the standard header.
-	// If not empty, it expands the header to fit Title and Type.
-	LongTitle string
+	LongTitle bool
 
 	// Text is the card's rule text.
-	Text string
+	Text []*html.Node
 
 	// LongText indicates that Text is too long to fit the standard text area.
-	// If not empty, it reduces the Text and FlavorText font size.
-	LongText string
+	LongText bool
 
 	// Type is the card's type, usually "Action" or "Thing".
-	Type string
+	Type []*html.Node
 
 	// BGColor is the color of the card header background,
 	// as a three- or six-digit hex triplet.
@@ -34,7 +40,7 @@ type Card struct {
 	BGColor string
 
 	// CornerValue is an optional value to print in the card's top right corner.
-	CornerValue string
+	CornerValue []*html.Node
 
 	// Image is the filename of an image for the card.
 	Image string
@@ -45,16 +51,15 @@ type Card struct {
 
 	// FlavorText is the card's flavor text. If not empty, this is displayed
 	// under the rule text, separated by a horizontal line.
-	FlavorText string
+	FlavorText []*html.Node
 
 	// Creator is the player who created the card. If not empty, this is
 	// displayed at the bottom of the card.
-	Creator string
+	Creator []*html.Node
 
 	// MiniCard indicates that the card is smaller than standard size,
 	// e.g. for display in example texts.
-	// If not empty, it reduces the card's size.
-	MiniCard string
+	MiniCard bool
 
 	// ID is the card's position within the deck.
 	ID int
@@ -63,32 +68,58 @@ type Card struct {
 // populateCard returns a Card populated with params.
 func populateCard(params map[string]string) Card {
 	return Card{
-		Title:       params["title"],
-		LongTitle:   params["longtitle"],
-		Text:        params["text"],
-		LongText:    params["longtext"],
-		Type:        params["type"],
+		Title:       parseWikitext(params["title"]),
+		LongTitle:   params["longtitle"] != "",
+		Text:        parseWikitext(params["text"]),
+		LongText:    params["longtext"] != "",
+		Type:        parseWikitext(params["type"]),
 		BGColor:     params["bgcolor"],
-		CornerValue: params["cornervalue"],
+		CornerValue: parseWikitext(params["cornervalue"]),
 		Image:       params["image"],
 		ImgBack:     params["imgback"],
-		FlavorText:  params["flavortext"],
-		Creator:     params["creator"],
-		MiniCard:    params["minicard"],
+		FlavorText:  parseWikitext(params["flavortext"]),
+		Creator:     parseWikitext(params["creator"]),
+		MiniCard:    params["minicard"] != "",
 	}
 }
 
-// withDefaultColor adds a default background color to c if it has none.
-func withDefaultColor(c Card) Card {
-	if c.BGColor == "" {
-		switch c.Type {
-		case "Action":
-			c.BGColor = actionRed
-		case "Thing":
-			c.BGColor = thingBlue
+// parseWikitext parses wikitext and wiki markup as HTML.
+func parseWikitext(s string) []*html.Node {
+	s = sanitize.RemoveHTMLTags(s)
+
+	s = replacePair(s, "'''''", "<b><i>", "</i></b>")
+	s = replacePair(s, "'''", "<b>", "</b>")
+	s = replacePair(s, "''", "<i>", "</i>")
+
+	r := strings.NewReader(s)
+	frag, err := html.ParseFragmentWithOptions(r,
+		&html.Node{
+			Type:     html.ElementNode,
+			DataAtom: atom.Div,
+			Data:     atom.Div.String(),
+		},
+		html.ParseOptionEnableScripting(false),
+	)
+	if err != nil {
+		return []*html.Node{{
+			Type: html.ErrorNode,
+			Data: err.Error(),
+		}}
+	}
+	return frag
+}
+
+// withDefaultColor returns a default color according to typ if bgcolor is empty.
+func withDefaultColor(typ, bgcolor string) string {
+	if bgcolor == "" {
+		switch strings.ToLower(typ) {
+		case "action":
+			return actionRed
+		case "thing":
+			return thingBlue
 		default:
-			c.BGColor = otherGray
+			return otherGray
 		}
 	}
-	return c
+	return bgcolor
 }

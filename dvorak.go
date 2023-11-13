@@ -19,9 +19,6 @@ type page struct {
 
 	// cards lists the page's cards.
 	cards []Card
-
-	// rawText indicates whether to preserve wiki markup as raw text.
-	rawText bool
 }
 
 // Get returns the source code of a Dvorak deck,
@@ -71,18 +68,15 @@ func readPage(url string) ([]byte, error) {
 }
 
 // Parse returns the Cards in b.
-func Parse(b []byte, opt ...Option) []Card {
-	return parsePage(b, opt...).cards
+func Parse(b []byte) []Card {
+	return parsePage(b).cards
 }
 
 // parsePage parses a page of wiki source code.
-func parsePage(b []byte, opt ...Option) *page {
+func parsePage(b []byte) *page {
 	p := &page{}
-	for _, o := range opt {
-		o.apply(p)
-	}
 
-	s := sanitize.RemoveHTMLTags(string(b))
+	s := sanitize.RemoveHTMLComments(string(b))
 
 	for _, s := range strings.SplitAfter(s, "}}") {
 		op := strings.LastIndex(s, "{{")
@@ -90,13 +84,14 @@ func parsePage(b []byte, opt ...Option) *page {
 			continue
 		}
 
-		name, params, err := parseTemplate(s[op:], p.rawText)
+		name, params, err := parseTemplate(s[op:])
 		if err != nil {
 			continue
 		}
 		switch name {
 		case "Card", "card":
-			c := withDefaultColor(populateCard(params))
+			c := populateCard(params)
+			c.BGColor = withDefaultColor(params["type"], c.BGColor)
 			c.ID = len(p.cards) + 1
 			p.cards = append(p.cards, c)
 		case "Subpage", "subpage":
@@ -114,7 +109,7 @@ func parsePage(b []byte, opt ...Option) *page {
 // Whitespace is trimmed from all returned strings.
 // If s is not a single well-formed template or has any nested subtemplates,
 // parseTemplate returns an error instead.
-func parseTemplate(s string, rawText bool) (name string, params map[string]string, err error) {
+func parseTemplate(s string) (name string, params map[string]string, err error) {
 	// https://meta.wikimedia.org/wiki/Help:Template
 
 	var errInvalid = fmt.Errorf("invalid template syntax")
@@ -134,16 +129,6 @@ func parseTemplate(s string, rawText bool) (name string, params map[string]strin
 	switch {
 	case !strings.Contains(s, "[[") || !strings.Contains(s, "]]"):
 		fields = strings.Split(s, "|")
-	case rawText:
-		for {
-			next := nextDelimiter(s)
-			if next == -1 {
-				break
-			}
-			fields = append(fields, s[:next])
-			s = s[next+1:]
-		}
-		fields = append(fields, s)
 	default:
 		for {
 			op := strings.Index(s, "[[")
@@ -188,12 +173,6 @@ func parseTemplate(s string, rawText bool) (name string, params map[string]strin
 	params = make(map[string]string)
 	for _, f := range fields[1:] {
 		key, value := parseParameter(f)
-		if !rawText {
-			// Parse bold/italic markup as HTML
-			value = replacePair(value, "'''''", "<b><i>", "</i></b>")
-			value = replacePair(value, "'''", "<b>", "</b>")
-			value = replacePair(value, "''", "<i>", "</i>")
-		}
 		params[key] = value
 	}
 	return
@@ -203,34 +182,11 @@ func parseTemplate(s string, rawText bool) (name string, params map[string]strin
 // Whitespace is trimmed from the returned strings.
 // If s does not contain "=", name is the empty string.
 func parseParameter(s string) (name, value string) {
-	eq := strings.Index(s, "=")
-	return strings.TrimSpace(strings.TrimSuffix(s[:eq+1], "=")),
-		strings.TrimSpace(s[eq+1:])
-}
-
-// nextDelimiter returns the index of the first "|" in s
-// that is not enclosed within matching double brackets,
-// or -1 if no unenclosed "|" is present in s.
-func nextDelimiter(s string) int {
-	lbr := strings.Index(s, "[[")
-	pipe := strings.Index(s, "|")
-
-	if lbr == -1 || pipe != -1 && pipe < lbr {
-		return pipe
+	before, after, found := strings.Cut(s, "=")
+	if !found {
+		return "", strings.TrimSpace(before)
 	}
-
-	// Left double bracket occurs first; find the next right double bracket.
-	rbroffset := strings.Index(s[lbr:], "]]")
-	if rbroffset == -1 {
-		return pipe
-	}
-
-	endbr := lbr + rbroffset + 2
-	next := nextDelimiter(s[endbr:])
-	if next == -1 {
-		return -1
-	}
-	return endbr + next
+	return strings.TrimSpace(before), strings.TrimSpace(after)
 }
 
 // parseLinkText returns the displayed text of an internal link, or the
@@ -261,14 +217,4 @@ func replacePair(s, old, new1, new2 string) string {
 		s = strings.Replace(s, old, new2, 1)
 	}
 	return s
-}
-
-// An Option modifies parsing.
-type Option struct{ apply func(*page) }
-
-// RawText outputs wiki markup as unparsed raw text.
-// Without RawText, internal links are outputted as their displayed text, and
-// bold/italic markup as HTML.
-func RawText() Option {
-	return Option{func(p *page) { p.rawText = true }}
 }

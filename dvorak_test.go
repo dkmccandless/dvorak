@@ -3,31 +3,9 @@ package dvorak
 import (
 	"reflect"
 	"testing"
-)
 
-func TestNextDelimiter(t *testing.T) {
-	for _, test := range []struct {
-		s string
-		i int
-	}{
-		{"", -1},
-		{"[[", -1},
-		{"]]", -1},
-		{"}}", -1},
-		{"|", 0},
-		{" |", 1},
-		{"Action|longtext=true}}", 6},
-		{"Action|creator=[[User:ABC|ABC]]", 6},
-		{"[[User:ABC|ABC", 10},
-		{"[[User:ABC|ABC]]", -1},
-		{"[[User:ABC|ABC]]|longtext=true", 16},
-		{"[[User:ABC|ABC]], [[User:DEF|DEF]], and others", -1},
-	} {
-		if i := nextDelimiter(test.s); i != test.i {
-			t.Errorf("nextDelimiter(%q): got %v, want %v", test.s, i, test.i)
-		}
-	}
-}
+	"kr.dev/diff"
+)
 
 func TestParseParameter(t *testing.T) {
 	for _, test := range []struct{ s, name, value string }{
@@ -45,10 +23,6 @@ func TestParseParameter(t *testing.T) {
 			"title=<font color=FFD700>Golden Title</font>",
 			"title", "<font color=FFD700>Golden Title</font>",
 		},
-		{
-			"text=Gain control of &lt;card title&gt;.",
-			"text", "Gain control of &lt;card title&gt;.",
-		},
 	} {
 		name, value := parseParameter(test.s)
 		if name != test.name || value != test.value {
@@ -61,32 +35,29 @@ func TestParseParameter(t *testing.T) {
 
 func TestParseTemplate(t *testing.T) {
 	for _, test := range []struct {
-		s        string
-		rawLinks bool
-		name     string
-		params   map[string]string
-		isErr    bool
+		s      string
+		name   string
+		params map[string]string
+		isErr  bool
 	}{
-		{"{{card|title=ABC", false, "", nil, true},
-		{"card|title=ABC}}", false, "", nil, true},
-		{"{{card|title=ABC}}{{card|title=DEF}}", false, "", nil, true},
-		{"{{}}", false, "", map[string]string{}, false},
-		{"{{card}}", false, "card", map[string]string{}, false},
-		{"{{Card}}", false, "Card", map[string]string{}, false},
-		{"{{template:card}}", false, "card", map[string]string{}, false},
-		{"{{template:Card}}", false, "Card", map[string]string{}, false},
-		{"{{Template:card}}", false, "card", map[string]string{}, false},
-		{"{{Template:Card}}", false, "Card", map[string]string{}, false},
+		{"{{card|title=ABC", "", nil, true},
+		{"card|title=ABC}}", "", nil, true},
+		{"{{card|title=ABC}}{{card|title=DEF}}", "", nil, true},
+		{"{{}}", "", map[string]string{}, false},
+		{"{{card}}", "card", map[string]string{}, false},
+		{"{{Card}}", "Card", map[string]string{}, false},
+		{"{{template:card}}", "card", map[string]string{}, false},
+		{"{{template:Card}}", "Card", map[string]string{}, false},
+		{"{{Template:card}}", "card", map[string]string{}, false},
+		{"{{Template:Card}}", "Card", map[string]string{}, false},
 		{
 			"{{card|title=ABC|text=DEF}}",
-			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
 		},
 		{
 			"{{ card | title = ABC | text = DEF }}",
-			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
@@ -96,84 +67,68 @@ func TestParseTemplate(t *testing.T) {
 			|title=ABC
 			|text=DEF
 			}}`,
-			false,
 			"card",
 			map[string]string{"title": "ABC", "text": "DEF"},
 			false,
 		},
 		{
 			"{{card|creator=[[User:ABC|ABC]]|title=DEF}}",
-			false,
 			"card",
 			map[string]string{"creator": "ABC", "title": "DEF"},
 			false,
 		},
 		{
-			"{{card|creator=[[User:ABC|ABC]]|title=DEF}}",
-			true,
-			"card",
-			map[string]string{"creator": "[[User:ABC|ABC]]", "title": "DEF"},
-			false,
-		},
-		{
 			"{{card|text=[[File: ABC.jpg]]DEF}}",
-			false,
 			"card",
 			map[string]string{"text": "DEF", "image": "ABC.jpg"},
 			false,
 		},
 		{
 			"{{card|text=[[File: ABC.jpg]DEF}}",
-			false,
 			"card",
 			map[string]string{"text": "[[File: ABC.jpg]DEF"},
 			false,
 		},
 		{
 			"{{card|creator=[[User:ABC|ABC]] ([[User talk:ABC|talk]])|title=DEF}}",
-			false,
 			"card",
 			map[string]string{"creator": "ABC", "title": "DEF"},
 			false,
 		},
 		{
 			"{{card|creator=[[User:ABC|ABC]] ([[User talk:ABC|talk]]) 21:33, 25 July 2012 (UTC)|title=DEF}}",
-			false,
 			"card",
 			map[string]string{"creator": "ABC", "title": "DEF"},
 			false,
 		},
 		{
 			"{{card|text=Draw a random card from the [[Heavy Actions booster pack]].}}",
-			false,
 			"card",
 			map[string]string{"text": "Draw a random card from the Heavy Actions booster pack."},
 			false,
 		},
 		{
 			"{{card|text=Read the [[Rules#Special_rules|Special Rules]] aloud.}}",
-			false,
 			"card",
 			map[string]string{"text": "Read the Special Rules aloud."},
 			false,
 		},
 		{
-			"{{card|title=''ABC''|text='''DEF'''. '''''GHI!'''''}}",
-			false,
+			"{{card| title = A | type = Action }}",
 			"card",
-			map[string]string{"title": "<i>ABC</i>", "text": "<b>DEF</b>. <b><i>GHI!</i></b>"},
+			map[string]string{"title": "A", "type": "Action"},
 			false,
 		},
 	} {
-		name, params, err := parseTemplate(test.s, test.rawLinks)
+		name, params, err := parseTemplate(test.s)
 		if isErr := err != nil; isErr != test.isErr {
 			t.Errorf("parseTemplate(%q): error=%v, want %v",
 				test.s, isErr, test.isErr,
 			)
 		}
 		if name != test.name || !reflect.DeepEqual(params, test.params) {
-			t.Errorf("parseTemplate(%q, %v): got %v, %v, want %v, %v",
-				test.s, test.rawLinks, name, params, test.name, test.params,
+			t.Errorf("parseTemplate(%q): got %v, %v, want %v, %v",
+				test.s, name, params, test.name, test.params,
 			)
 		}
 	}
@@ -193,16 +148,6 @@ func TestParsePage(t *testing.T) {
 			&page{subpages: []subpage{{page: "Cards 1-100"}}},
 		},
 		{
-			`{{card|title=A|text={{card|title=B|type=Thing}}card|type=Action}}
-			{{card|title=C}}`,
-			&page{
-				cards: []Card{
-					{Title: "B", Type: "Thing", BGColor: thingBlue, ID: 1},
-					{Title: "C", BGColor: otherGray, ID: 2},
-				},
-			},
-		},
-		{
 			`
 				{{card| title = A | type = Action }}
 				card|title=B|type=Thing}}
@@ -212,9 +157,9 @@ func TestParsePage(t *testing.T) {
 			`,
 			&page{
 				cards: []Card{
-					{Title: "A", Type: "Action", BGColor: actionRed, ID: 1},
-					{Title: "C", Type: "Letter", BGColor: otherGray, ID: 2},
-					{Title: "E", BGColor: otherGray, ID: 3},
+					{Title: text("A"), Type: text("Action"), BGColor: actionRed, ID: 1},
+					{Title: text("C"), Type: text("Letter"), BGColor: otherGray, ID: 2},
+					{Title: text("E"), BGColor: otherGray, ID: 3},
 				},
 			},
 		},
@@ -234,19 +179,15 @@ func TestParsePage(t *testing.T) {
 					{page: "Cards 101-200"},
 				},
 				cards: []Card{
-					{Title: "A", Type: "Action", BGColor: "900", ID: 1},
-					{Title: "B", Type: "Thing", BGColor: "090", ID: 2},
+					{Title: text("A"), Type: text("Action"), BGColor: "900", ID: 1},
+					{Title: text("B"), Type: text("Thing"), BGColor: "090", ID: 2},
 				},
 			},
 		},
 	} {
 		b := []byte(test.s)
 		p := parsePage(b)
-		if !reflect.DeepEqual(p, test.p) {
-			t.Errorf("parsePage(%v): got %v; want %v",
-				b, p, test.p,
-			)
-		}
+		diff.Test(t, t.Errorf, p, test.p)
 	}
 }
 
