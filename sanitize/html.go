@@ -158,7 +158,7 @@ var mwEntityAliases = map[string]string{
 // https://github.com/wikimedia/mediawiki/blob/80d72fc07d509916224555c9a062892fc3690864/includes/parser/Sanitizer.php
 func RemoveHTMLTags(s string) string {
 	var b strings.Builder
-	s = removeHTMLComments(s)
+	s = RemoveHTMLComments(s)
 	subs := strings.Split(s, "<")
 	b.WriteString(strings.ReplaceAll(subs[0], ">", "&gt;"))
 	subs = subs[1:]
@@ -591,10 +591,10 @@ func escapeIDReferenceList(ids string) string {
 	return strings.Join(fields, " ")
 }
 
-// removeHTMLComments removes HTML comments.
+// RemoveHTMLComments removes HTML comments.
 // If a comment is preceded and followed by a newline (ignoring spaces),
-// removeHTMLComments removes the spaces and one of the newlines as well.
-func removeHTMLComments(s string) string {
+// RemoveHTMLComments removes the spaces and one of the newlines as well.
+func RemoveHTMLComments(s string) string {
 	for {
 		op := strings.Index(s, "<!--")
 		if op == -1 {

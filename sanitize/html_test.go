@@ -61,7 +61,7 @@ func TestRemoveHTMLComments(t *testing.T) {
 		{"abc\n <!--comment--> ", "abc\n  "},
 		{"abc \n   <!--comment-->   \n  def", "abc \n  def"},
 	} {
-		if got := removeHTMLComments(tt.s); got != tt.want {
+		if got := RemoveHTMLComments(tt.s); got != tt.want {
 			t.Errorf("removeHTMLComments(%q): got %q, want %q", tt.s, got, tt.want)
 		}
 	}
